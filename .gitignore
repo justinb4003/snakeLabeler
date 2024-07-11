@@ -6,3 +6,5 @@ requirements.txt
 auth.log
 *.log
 *.json
+dids.db
+*.out
