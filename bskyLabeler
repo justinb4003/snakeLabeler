@@ -6,92 +6,22 @@ source .env
 echo "$BLUESKY_HANDLE"
 echo "$BLUESKY_APP_PASSWORD"
 
-debug=1
-
-log() {
-    if [ "$debug" -eq 0 ]; then
-        return
-    else
-        echo "$(date) [bsky_post_labeler]: $*"
-    fi
-}
-
-log2() {
-    jq -nc --arg timestamp "$(date +"%s")" --arg date "$(date +"%Y-%m-%dT%H:%M:%S%z")" --arg did "$did" --arg url "$url" --arg link "$link" --arg cid "$cid" --arg rkey "$rkey" --arg whitelist "$whitelist" '{"timestamp": $timestamp, "date": $date, "level": "INFO", "did": $did, "url": $url, "uri": $link, "cid": $cid, "rkey": $rkey, "whitelist": $whitelist}'
-}
+source settings.sh
+process="BSKY_FUNDRAISING_LINK_LABELER"
+logfile=fundraising_link.log
 
 log "Script started."
+
+# Fetch the access JWT
+log "Authenticating with Bluesky."
+auth "$BLUESKY_HANDLE" "$BLUESKY_APP_PASSWORD"
 
 # Initialize variables for rate limiting
 LABEL_LIMIT_REMAINING=3000
 LABEL_LIMIT_RESET=0
 
-# Fetch the access JWT
-log "Fetching access JWT."
-auth=$(curl -X POST https://blewit.us-west.host.bsky.network/xrpc/com.atproto.server.createSession \
-    -H "Content-Type: application/json" \
-    -d "{\"identifier\": \"$BLUESKY_HANDLE\", \"password\": \"$BLUESKY_APP_PASSWORD\"}")
-
-echo "$auth" >>auth.log
-
-if [ -z "$auth" ]; then
-    log "Failed to fetch accessJWT."
-    exit 1
-fi
-
-accessJwt=$(echo "$auth" | jq -r '.accessJwt')
-refreshJwt=$(echo "$auth" | jq -r '.refreshJwt')
-
-if [ -z "$accessJwt" ] || [ -z "$refreshJwt" ]; then
-    log "Failed to parse access or refresh JWT."
-    exit 1
-fi
-
-log "Fetched and parsed access JWT."
-
-function get_post_record() {
-    DID=$1
-    RKEY=$2
-
-    curl "https://blewit.us-west.host.bsky.network/xrpc/com.atproto.repo.getRecord?repo=$DID&collection=app.bsky.feed.post&rkey=$RKEY" \
-        -H 'content-type: application/json'
-}
-
-function create_label() {
-    URI=$1
-    CID=$2
-    LBL=$3
-
-    curl -v 'https://blewit.us-west.host.bsky.network/xrpc/tools.ozone.moderation.emitEvent' \
-        -H 'accept: */*' \
-        -H 'accept-language: en-US,en;q=0.9' \
-        -H 'atproto-accept-labelers: did:plc:ar7c4by46qjdydhdevvrndac;redact' \
-        -H 'atproto-proxy: did:plc:e4elbtctnfqocyfcml6h2lf7#atproto_labeler' \
-        -H "authorization: Bearer $accessJwt" \
-        -H 'content-type: application/json' \
-        -H 'origin: https://ozone.mountainherder.xyz' \
-        -H 'priority: u=1, i' \
-        -H 'referer: https://ozone.mountainherder.xyz/' \
-        --data-raw "{\"subject\":{\"\$type\":\"com.atproto.repo.strongRef\",\"uri\":\"$URI\",\"cid\":\"$CID\"},\"createdBy\":\"did:plc:e4elbtctnfqocyfcml6h2lf7\",\"subjectBlobCids\":[],\"event\":{\"\$type\":\"tools.ozone.moderation.defs#modEventLabel\",\"createLabelVals\":[\"$LBL\"],\"negateLabelVals\":[]}}"
-
-    LABEL_LIMIT_REMAINING=$(echo "$headers" | grep -i "ratelimit-remaining" | awk '{print $2}' | tr -d '\r')
-    LABEL_LIMIT_RESET=$(echo "$headers" | grep -i "ratelimit-reset" | awk '{print $2}' | tr -d '\r')
-
-}
-
-# Function to check and handle rate limiting
-check_rate_limit() {
-    local LIMIT_REMAINING=$1
-    local LIMIT_RESET=$2
-
-    if [ "$LIMIT_REMAINING" -le 10 ]; then
-        current_time=$(date +%s)
-        wait_time=$((LIMIT_RESET - current_time))
-        if [ "$wait_time" -gt 0 ]; then
-            echo "Rate limit exceeded. Waiting for $wait_time seconds."
-            sleep "$wait_time"
-        fi
-    fi
+log2() {
+    jq -nc --arg timestamp "$(date +"%s")" --arg date "$(date +"%Y-%m-%dT%H:%M:%S%z")" --arg did "$did" --arg url "$url" --arg link "$link" --arg cid "$cid" --arg rkey "$rkey" --arg whitelist "$whitelist" '{"timestamp": $timestamp, "date": $date, "level": "INFO", "did": $did, "url": $url, "uri": $link, "cid": $cid, "rkey": $rkey, "whitelist": $whitelist}'
 }
 
 # Function to process each post
@@ -111,7 +41,7 @@ function process_post() {
             # Check if any URIs match the specified domains
             found=0
             for url in $urls; do
-                if echo "$url" | grep -E 'gofundme\.com|gofund\.me|ko-fi\.com|buymeacoffee\.com|venmo\.com|cash\.app|paypal\.com|paypal\.me' >/dev/null; then
+                if echo "$url" | grep -iE 'gofundme\.com|gofund\.me|ko-fi\.com|buymeacoffee\.com|venmo\.com|cash\.app|cash\.me|paypal\.com|paypal\.me' >/dev/null; then
                     found=1
                     echo "$json" >>flagged_posts.json
                     rkey=$(echo "$json" | jq -r '.rkey')
@@ -125,10 +55,15 @@ function process_post() {
                     else
 
                         whitelist=0
-                        if echo "$did" | grep -E 'did:plc:e2c3fpyix7y2nmhutzwawiuq|did:plc:x5o53myzrf7hr36tltzi645u|did:plc:vlpy6zuqqum5tumv7b6dw5fp' >/dev/null; then
+                        if echo "$did" | grep -iE 'did:plc:e2c3fpyix7y2nmhutzwawiuq|did:plc:x5o53myzrf7hr36tltzi645u|did:plc:vlpy6zuqqum5tumv7b6dw5fp|did:plc:36h6ttx2g23zqr4accilbvo7|did:plc:xs6m4zsrcmn5fyjanq6t4sg2' >/dev/null; then
                             whitelist=1
                             echo "$(log2)" >>flag_log.json
                             log "Fundraising link $url found at $link with CID $cid and whitelisted DID $did."
+                            continue
+                        elif echo "$url" | grep -iE 'ko-fi\.com/goodhead/shop|ko-fi\.com/kflstudios/shop|ko-fi\.com/s/3c3cbece91|ko-fi\.com/s/d33c50d04d|https://ko-fi\.com/newbabyfly/shop|ko-fi\.com/wheatart' >/dev/null; then
+                            whitelist=1
+                            echo "$(log2)" >>flag_log.json
+                            log "Whitelisted $url found at $link with CID $cid and $did."
                             continue
                         else
                             log "Fundraising link $url found at $link with CID $cid."
@@ -137,7 +72,7 @@ function process_post() {
                             # Create a label
                             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
 
-                            response=$(create_label "$link" "$cid" "fundraising-link")
+                            create_label "$link" "$cid" "fundraising-link"
                             log "Label creation response: $response"
                             echo "$response" >>log.json
                             error=$(echo "$response" | jq -r '.error')
@@ -146,26 +81,54 @@ function process_post() {
                                 log "Token expired, refreshing tokens."
 
                                 # Refresh the tokens
-                                auth=$(curl -s -X POST 'https://blewit.us-west.host.bsky.network/xrpc/com.atproto.server.refreshSession' \
-                                    -H "Content-Type: application/json" \
-                                    -H "Authorization: Bearer $refreshJwt")
+                                reAuth "$refreshJwt"
 
-                                # Update tokens
-                                accessJwt=$(echo "$auth" | jq -r '.accessJwt')
-                                refreshJwt=$(echo "$auth" | jq -r '.refreshJwt')
-
-                                response=$(create_label "$link" "$cid")
+                                create_label "$link" "$cid" "fundraising-link"
                                 log "Label creation response after token refresh: $response"
                                 echo "$response" >>log.json
                             fi
                         fi
                     fi
                 fi
-            done
+                alt_tech=0
+                if echo "$url" | grep -E 'givesendgo\.com' >/dev/null; then
+                    alt_tech=1
+                    echo "$json" >>flagged_posts-at.json
+                    rkey=$(echo "$json" | jq -r '.rkey')
+                    did=$(echo "$json" | jq -r '.did')
+                    link=$(echo "$json" | jq -r '"at://" + .did + "/app.bsky.feed.post/" + .rkey')
+                    cid=$(get_post_record "$did" "$rkey" | jq -r '.cid')
 
-            if [ $found -eq 0 ]; then
-                log "No fundraising links found."
-            fi
+                    if [ -z "$cid" ]; then
+                        log "CID is empty, continuing."
+                        continue
+                    else
+
+                        whitelist=0
+                        log "Alt-Tech Fundraising link $url found at $link with CID $cid."
+                        echo "$(log2)" >>flag_log.json
+
+                        # Create a label
+                        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+
+                        create_label "$link" "$cid" "fundraising-link-at"
+                        log "Label creation response: $response"
+                        echo "$response" >>log-at.json
+                        error=$(echo "$response" | jq -r '.error')
+
+                        if [ "$error" = "ExpiredToken" ]; then
+                            log "Token expired, refreshing tokens."
+
+                            # Refresh the tokens
+                            reAuth "$refreshJwt"
+
+                            create_label "$link" "$cid" "fundraising-link-at"
+                            log "Label creation response after token refresh: $response"
+                            echo "$response" >>log-at.json
+                        fi
+                    fi
+                fi
+            done
         fi
     fi
 
@@ -174,8 +137,4 @@ function process_post() {
 # Stream records and process each one
 websocat -t - autoreconnect:ws://localhost:6008/subscribe?wantedCollections=app.bsky.feed.post | while read -r post; do
     process_post "$post"
-#    did=$(echo "$post" | jq -r '.did')
-#    sqlite3 dids.db <<EOF
-#INSERT OR IGNORE INTO dids (did) VALUES ('$did');
-#EOF
 done

@@ -8,3 +8,9 @@ auth.log
 *.json
 dids.db
 *.out
+bskyLabeler-at
+skyWatch
+label_profiles_test.sh
+*.db
+logs/*
+restart-sw.sh

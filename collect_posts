@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+source settings.sh
+process="COLLECT_DIDS"
+logfile=collect_dids.log
+log "Script started."
+
+function write {
+    jq -nc --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S%z")" --arg date "$(date +"%Y-%m-%d")" --arg did "$did" --arg lang "$lang" '{"timestamp": $timestamp, "date": $date, "did": $did, "lang": $lang}'
+}
+
+function process {
+    local json="$1"
+
+    # Extract the DID and language from the post
+    did=$(echo "$json" | jq -r '.did')
+    langs=$(echo "$json" | jq -r '.record.langs')
+
+    found=0
+    for l in $langs; do
+        if echo "$l" | grep -iE 'en' >/dev/null; then
+            found=1
+            lang="en"
+            echo "$(write)" >> "dids_$(date +"%Y-%m-%d").json"
+        fi
+    done
+
+}
+
+# Stream records and process each one
+websocat -t - autoreconnect:ws://localhost:6008/subscribe?wantedCollections=app.bsky.feed.post | while read -r post; do
+    process "$post"
+done
