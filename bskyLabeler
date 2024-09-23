@@ -75,14 +75,14 @@ function process_post() {
                             create_label "$link" "$cid" "fundraising-link"
                             log "Label creation response: $response"
                             echo "$response" >>log.json
-                            error=$(echo "$response" | jq -r '.error')
+                            expiredJWT_Check "$response"
 
-                            if [ "$error" = "ExpiredToken" ]; then
-                                log "Token expired, refreshing tokens."
-
-                                # Refresh the tokens
-                                reAuth "$refreshJwt"
-
+                            if [ "$tokenExpired" -eq 1 ]; then
+                                create_label "$link" "$cid" "fundraising-link"
+                                log "Label creation response after token refresh: $response"
+                                echo "$response" >>log.json
+                            fi
+                            if [ "$tokenInvalid" -eq 1 ]; then
                                 create_label "$link" "$cid" "fundraising-link"
                                 log "Label creation response after token refresh: $response"
                                 echo "$response" >>log.json
@@ -114,17 +114,17 @@ function process_post() {
                         create_label "$link" "$cid" "fundraising-link-at"
                         log "Label creation response: $response"
                         echo "$response" >>log-at.json
-                        error=$(echo "$response" | jq -r '.error')
+                        expiredJWT_Check "$response"
 
-                        if [ "$error" = "ExpiredToken" ]; then
-                            log "Token expired, refreshing tokens."
-
-                            # Refresh the tokens
-                            reAuth "$refreshJwt"
-
+                        if [ "$tokenExpired" -eq 1 ]; then
                             create_label "$link" "$cid" "fundraising-link-at"
                             log "Label creation response after token refresh: $response"
-                            echo "$response" >>log-at.json
+                            echo "$response" >>log.json
+                        fi
+                        if [ "$tokenInvalid" -eq 1 ]; then
+                            create_label "$link" "$cid" "fundraising-link-at"
+                            log "Label creation response after token refresh: $response"
+                            echo "$response" >>log.json
                         fi
                     fi
                 fi

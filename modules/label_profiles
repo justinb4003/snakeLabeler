@@ -21,10 +21,14 @@ for did in $dids; do
         check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
         create_profile_label "$did" "hammer-sickle"
     fi
+    if [ "$tokenInvalid" -eq 1 ]; then
+        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+        create_profile_label "$did" "hammer-sickle"
+    fi
 done
 
 # Label profiles for Inverted Red Triangle
-dids=$(duckdb "$DATABASE" -json -c "
+dids=$(duckdb "$DATABASE" -jsonlines -c "
     SELECT DISTINCT did
     FROM reports
     WHERE flag = 'triangle' AND did NOT IN (
@@ -42,6 +46,10 @@ for did in $dids; do
     echo "$response" >> "$LOGPATH/label.log"
 
     if [ "$tokenExpired" -eq 1 ]; then
+        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+        create_profile_label "$did" "inverted-red-triangle"
+    fi
+    if [ "$tokenInvalid" -eq 1 ]; then
         check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
         create_profile_label "$did" "inverted-red-triangle"
     fi

@@ -22,6 +22,8 @@ function process {
             found=1
             lang="en"
             echo "$(write)" >> "dids_$(date +"%Y-%m-%d").json"
+
+            log "Added DID: $did with language: $lang."
         fi
     done
 

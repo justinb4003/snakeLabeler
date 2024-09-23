@@ -14,3 +14,4 @@ label_profiles_test.sh
 *.db
 logs/*
 restart-sw.sh
+fix.sh
