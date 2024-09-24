@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+function auth {
+    local BLUESKY_HANDLE=$1
+    local BLUESKY_APP_PASSWORD=$2
+    local logfile="auth.log"
+    local process="AUTHENTICATION"
+
+    # Fetch the access JWT
+    log "Fetching access JWT."
+
+    auth=$(curl -X POST https://blewit.us-west.host.bsky.network/xrpc/com.atproto.server.createSession \
+        -H "Content-Type: application/json" \
+        -d "{\"identifier\": \"$BLUESKY_HANDLE\", \"password\": \"$BLUESKY_APP_PASSWORD\"}")
+
+    log "$auth"
+
+    if [ -z "$auth" ]; then
+        log "Failed to fetch accessJWT."
+        exit 1
+    fi
+
+    accessJwt=$(echo "$auth" | jq -r '.accessJwt')
+    refreshJwt=$(echo "$auth" | jq -r '.refreshJwt')
+
+    if [ -z "$accessJwt" ] || [ -z "$refreshJwt" ]; then
+        log "Failed to parse access or refresh JWT."
+        exit 1
+    fi
+
+    log "Fetched and parsed access JWT."
+}
+
+function reAuth {
+    local refreshJwt=$1
+    local logfile="auth.log"
+    local process="AUTHENTICATION"
+
+    log "Refreshing access JWT."
+
+    auth=$(curl -s -X POST 'https://blewit.us-west.host.bsky.network/xrpc/com.atproto.server.refreshSession' \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $refreshJwt")
+
+    # Update tokens
+    accessJwt=$(echo "$auth" | jq -r '.accessJwt')
+    refreshJwt=$(echo "$auth" | jq -r '.refreshJwt')
+
+}

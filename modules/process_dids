@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+# Uncomment the following line to run standalone
+# source settings.sh
+# today=$(date -d "$date -1 days" +"%Y-%m-%d")
+log "Processing dids for $today."
+
+duckdb "$DATABASE" -c "
+    COPY users FROM '$file';
+"
+
+c1=$(duckdb "$DATABASE" -json -c "
+    SELECT COUNT(*) as count
+    FROM users
+    WHERE DATE = '$today';
+    " | jq -r '.[0].count')
+
+log "Added $c1 dids on $today."
+
+c2=$(duckdb "$DATABASE" -json -c "
+    SELECT COUNT(*) as count
+    FROM unique_dids;
+    " | jq -r '.[0].count')
+
+duckdb "$DATABASE" -c "
+    CREATE OR REPLACE TABLE unique_dids AS
+    SELECT DISTINCT did FROM users
+    WHERE DATE = '$today';
+    "
+c2=$(duckdb "$DATABASE" -json -c "
+    SELECT COUNT(*) as count
+    FROM unique_dids;
+    " | jq -r '.[0].count')
+
+log "$c2 new unique dids observed on $today."
+
+log "Cleaning up."
+tar -czvf "dids_$today".tar.gz "dids_$today".json
+log "Process completed."
