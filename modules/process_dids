@@ -12,7 +12,7 @@ duckdb "$DATABASE" -c "
 c1=$(duckdb "$DATABASE" -json -c "
     SELECT COUNT(*) as count
     FROM users
-    WHERE DATE = '$today';
+    WHERE date = '$today' AND english = 1 OR flagged = 1;
     " | jq -r '.[0].count')
 
 log "Added $c1 dids on $today."
@@ -25,7 +25,7 @@ c2=$(duckdb "$DATABASE" -json -c "
 duckdb "$DATABASE" -c "
     CREATE OR REPLACE TABLE unique_dids AS
     SELECT DISTINCT did FROM users
-    WHERE DATE = '$today';
+    WHERE DATE = '$today' AND english = 1 OR flagged = 1;
     "
 c2=$(duckdb "$DATABASE" -json -c "
     SELECT COUNT(*) as count
