@@ -6,7 +6,6 @@ requirements.txt
 auth.log
 *.log
 *.json
-dids.db
 *.out
 bskyLabeler-at
 skyWatch
@@ -15,3 +14,6 @@ label_profiles_test.sh
 logs/*
 restart-sw.sh
 fix.sh
+test_data/*
+test_data
+*.sql
