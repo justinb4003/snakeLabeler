@@ -92,6 +92,7 @@ function get_profiles {
 
     curl -v "https://blewit.us-west.host.bsky.network/xrpc/app.bsky.actor.getProfiles?$params" \
         -H "authorization: Bearer $accessJwt" \
+        -H 'accept-encoding: identity' \
         -H 'accept: application/json' -o "$tmp_body" 2> "$tmp_headers"
 
      # Extract the rate limit information from the headers
@@ -158,6 +159,7 @@ function process_users {
         hammer_sickle=0
         triangle=0
         swastika=0
+        dinosaur=0
 
         # Zeta
         if echo "$displayName" | grep -iE 'ζ' >/dev/null; then
@@ -220,6 +222,22 @@ function process_users {
             duckdb "$DATABASE" -c "
                     INSERT INTO reports
                         VALUES ('${did}', '${displayName}', '${description}', '${labels}', 'swastika',  '$(date +"%Y-%m-%d %H:%M:%S%z")');
+                    "
+        fi
+
+        # Dinosaur
+        if echo "$displayName" | grep -iE 'Feminist🦖|Feminist 🦖' >/dev/null; then
+            dinosaur=1
+            log "Flagged DID: $did with $displayName."
+        elif echo "$description" | grep -iE 'Feminist🦖|Feminist 🦖' >/dev/null; then
+            dinosaur=1
+            log "Flagged DID: $did with $description."
+        fi
+
+        if [ "$dinosaur" -eq 1 ]; then
+            duckdb "$DATABASE" -c "
+                    INSERT INTO reports
+                        VALUES ('${did}', '${displayName}', '${description}', '${labels}', 'dinosaur-emoji',  '$(date +"%Y-%m-%d %H:%M:%S%z")');
                     "
         fi
     done
