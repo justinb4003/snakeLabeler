@@ -52,6 +52,8 @@ done
 log "Starting $MODULES/label_profiles."
 source "${MODULES}/label_profiles"
 
-
+# Update Lists
+log "Starting $MODULES/update_lists."
+source "${MODULES}/update_lists"
 
 

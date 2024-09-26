@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+
+# Source Credentials --- Note that this is not secure and will leak
+# Goal is just to keep them off github
+source .env
+echo "$BLUESKY_HANDLE"
+echo "$BLUESKY_APP_PASSWORD"
+
+source settings.sh
+process="LIST_UPDATER"
+logfile=list_updater.log
+
+log "Script started."
+
+today=$(date +"%Y-%m-%d")
+
+function add_list_item() {
+
+    local list_id=$1
+    local subject=$2
+
+    # Create temporary files to store headers and body
+    tmp_headers=$(mktemp)
+    tmp_body=$(mktemp)
+
+    curl -v 'https://blewit.us-west.host.bsky.network/xrpc/com.atproto.repo.createRecord' \
+        -H 'atproto-accept-labelers: did:plc:ar7c4by46qjdydhdevvrndac;redact' \
+        -H "authorization: Bearer $accessJwt" \
+        -H 'content-type: application/json' \
+        -d "{
+            \"collection\": \"app.bsky.graph.listitem\",
+            \"repo\": \"did:plc:e4elbtctnfqocyfcml6h2lf7\",
+            \"record\": {
+                \"subject\": \"$subject\",
+                \"list\": \"$list_id\",
+                \"createdAt\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")\",
+                \"\$type\": \"app.bsky.graph.listitem\"
+            }
+        }" > "$tmp_body" 2> "$tmp_headers"
+
+     # Extract the rate limit information from the headers
+    LABEL_LIMIT_REMAINING=$(grep -i "ratelimit-remaining" "$tmp_headers" | awk '{print $3}' | tr -d '\r')
+    LABEL_LIMIT_RESET=$(grep -i "ratelimit-reset" "$tmp_headers" | awk '{print $3}' | tr -d '\r')
+
+    # Capture the response body
+    response=$(cat "$tmp_body" | tr -d '\n')
+
+    # Clean up the temporary files
+    rm "$tmp_headers" "$tmp_body"
+
+}
+
+dids=$(duckdb "$DATABASE" -jsonlines -c "
+        SELECT DISTINCT did
+        FROM labeled_dids
+        WHERE label='$1' AND did NOT IN (
+            SELECT did
+            FROM whitelist
+            ) AND did NOT IN (
+            SELECT did
+            FROM listed_dids
+            WHERE label='$1'
+            );" | jq -r '.[]')
+
+# Update List for Inverted Red Triangle
+dids=$(duckdb "$DATABASE" -jsonlines -c "
+        SELECT DISTINCT did
+        FROM labeled_dids
+        WHERE label = 'inverted-red-triangle' AND did NOT IN (
+            SELECT did
+            FROM whitelist
+            ) AND did NOT IN (
+            SELECT did
+            FROM listed_dids
+            WHERE label = 'inverted-red-triangle'
+            );" | jq -r '.[]')
+
+label="inverted-red-triangle"
+list=at://did:plc:e4elbtctnfqocyfcml6h2lf7/app.bsky.graph.list/3l4ueabtpec2a
+
+for did in $dids; do
+    log "Adding $did to list: $list."
+
+    duckdb "$DATABASE" -c "
+    INSERT INTO listed_dids (did, label, date) VALUES ('$did', '$label', '$today');
+    "
+
+    check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+    add_list_item "$list" "$did"
+
+    expiredJWT_Check "$response"
+    echo "$response" >> "$LOGPATH/list.log"
+
+    if [ "$tokenExpired" -eq 1 ]; then
+        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+        create_profile_label "$did" "$label"
+    fi
+    if [ "$tokenInvalid" -eq 1 ]; then
+        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+        create_profile_label "$did" "$label"
+    fi
+done
+
+# Update List for Inverted Red Triangle
+dids=$(duckdb "$DATABASE" -jsonlines -c "
+        SELECT DISTINCT did
+        FROM labeled_dids
+        WHERE label = 'hammer-sickle' AND did NOT IN (
+            SELECT did
+            FROM whitelist
+            ) AND did NOT IN (
+            SELECT did
+            FROM listed_dids
+            WHERE label = 'hammer-sickle'
+            );" | jq -r '.[]')
+
+label="hammer-sickle"
+list=at://did:plc:e4elbtctnfqocyfcml6h2lf7/app.bsky.graph.list/3l4ue6w2aur2v
+
+for did in $dids; do
+    log "Adding $did to list: $list."
+
+    duckdb "$DATABASE" -c "
+    INSERT INTO listed_dids (did, label, date) VALUES ('$did', '$label', '$today');
+    "
+
+    check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+    add_list_item "$list" "$did"
+
+    expiredJWT_Check "$response"
+    echo "$response" >> "$LOGPATH/list.log"
+
+    if [ "$tokenExpired" -eq 1 ]; then
+        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+        create_profile_label "$did" "$label"
+    fi
+    if [ "$tokenInvalid" -eq 1 ]; then
+        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+        create_profile_label "$did" "$label"
+    fi
+done
