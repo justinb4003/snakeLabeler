@@ -1,9 +1,23 @@
 #!/usr/bin/env bash
+
+# Function to authenticate with the Bluesky server.
+#
+# Parameters:
+#   - BLUESKY_HANDLE: The Bluesky handle for authentication.
+#   - BLUESKY_APP_PASSWORD: The Bluesky application password for authentication.
+#
+# Returns:
+#   - None
+#
+# Description:
+#   This function fetches the access JWT by making a POST request to the Bluesky server. It uses the provided Bluesky handle and application password for authentication. The access JWT and refresh JWT are then parsed from the response and stored in variables. If the authentication fails or the JWTs cannot be parsed, the function logs an error and exits with a non-zero status code.
+#
+# Example usage:
+#   auth "myhandle" "mypassword"
 function auth {
     local BLUESKY_HANDLE=$1
     local BLUESKY_APP_PASSWORD=$2
-    local logfile="auth.log"
-    local process="AUTHENTICATION"
+    local auth
 
     # Fetch the access JWT
     log "Fetching access JWT."
@@ -30,16 +44,28 @@ function auth {
     log "Fetched and parsed access JWT."
 }
 
+
+# Function: reAuth
+#
+# Description: Refreshes the access JWT by sending a POST request to the specified endpoint with the provided token.
+#
+# Parameters:
+#   - token: The token used for authorization.
+#
+# Returns: None
+#
+# Example Usage:
+#   reAuth "your_token_here"
+
 function reAuth {
-    local refreshJwt=$1
-    local logfile="auth.log"
-    local process="AUTHENTICATION"
+    local token=$1
+    local auth
 
     log "Refreshing access JWT."
 
     auth=$(curl -s -X POST 'https://blewit.us-west.host.bsky.network/xrpc/com.atproto.server.refreshSession' \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $refreshJwt")
+            -H "Authorization: Bearer $token")
 
     # Update tokens
     accessJwt=$(echo "$auth" | jq -r '.accessJwt')

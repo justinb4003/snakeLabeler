@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+function label_profiles {
+    local dids
+
+    log "Labeling profiles."
+
+    # Label profiles for Hammer & Sickle
+    dids=$(duckdb "$DATABASE" -jsonlines -c "
+    SELECT DISTINCT did
+    FROM reports
+    WHERE flag = 'hammer-sickle' AND did NOT IN (
+        SELECT did
+        FROM labeled_dids
+        WHERE label = 'hammer-sickle'
+    );" | jq -r '.[]')
+
+    for did in $dids; do
+        log "Labeling $did as hammer-sickle."
+        duckdb "$DATABASE" -c "INSERT INTO labeled_dids (did, label, date) VALUES ('$did', 'hammer-sickle', '$today');"
+
+        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+        create_profile_label "$did" "hammer-sickle"
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/label.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            create_profile_label "$did" "hammer-sickle"
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            create_profile_label "$did" "hammer-sickle"
+        fi
+    done
+
+    # Label profiles for Inverted Red Triangle
+    dids=$(duckdb "$DATABASE" -jsonlines -c "
+    SELECT DISTINCT did
+    FROM reports
+    WHERE flag = 'triangle' AND did NOT IN (
+        SELECT did
+        FROM labeled_dids
+        WHERE label = 'inverted-red-triangle'
+    );" | jq -r '.[]')
+
+    for did in $dids; do
+        log "Labeling $did as inverted-red-triangle."
+        duckdb "$DATABASE" -c "INSERT INTO labeled_dids (did, label, date) VALUES ('$did', 'inverted-red-triangle', '$today');"
+
+        create_profile_label "$did" "inverted-red-triangle"
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/label.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            create_profile_label "$did" "inverted-red-triangle"
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            create_profile_label "$did" "inverted-red-triangle"
+        fi
+
+    done
+
+    log "Done labeling profiles."
+}

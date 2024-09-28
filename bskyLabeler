@@ -6,7 +6,11 @@ source .env
 echo "$BLUESKY_HANDLE"
 echo "$BLUESKY_APP_PASSWORD"
 
-source settings.sh
+source config.sh
+source lib/auth
+source lib/functions
+
+
 process="BSKY_FUNDRAISING_LINK_LABELER"
 logfile=fundraising_link.log
 
@@ -27,6 +31,15 @@ log2() {
 # Function to process each post
 function process_post() {
     local json="$1"
+    local did
+    local rkey
+    local cid
+    local link
+    local urls
+    local type
+    local found
+    local whitelist
+    local alt_tech
 
     facet=$(echo "$json" | jq '.record | has("facets")')
     if [ "$facet" = "true" ]; then

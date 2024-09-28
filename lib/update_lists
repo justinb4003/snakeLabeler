@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+
+function update_lists() {
+    log "Update Lists started."
+    local today
+    local dids
+    local label
+    local list
+
+    today=$(date +"%Y-%m-%d")
+    dids=$(duckdb "$DATABASE" -jsonlines -c "
+        SELECT DISTINCT did
+        FROM labeled_dids
+        WHERE label='$1' AND did NOT IN (
+            SELECT did
+            FROM whitelist
+            ) AND did NOT IN (
+            SELECT did
+            FROM listed_dids
+            WHERE label='$1'
+            );" | jq -r '.[]')
+
+    # Update List for Inverted Red Triangle
+    dids=$(duckdb "$DATABASE" -jsonlines -c "
+        SELECT DISTINCT did
+        FROM labeled_dids
+        WHERE label = 'inverted-red-triangle' AND did NOT IN (
+            SELECT did
+            FROM whitelist
+            ) AND did NOT IN (
+            SELECT did
+            FROM listed_dids
+            WHERE label = 'inverted-red-triangle'
+            );" | jq -r '.[]')
+
+    label="inverted-red-triangle"
+    list=at://did:plc:e4elbtctnfqocyfcml6h2lf7/app.bsky.graph.list/3l4ueabtpec2a
+
+    for did in $dids; do
+        log "Adding $did to list: $list."
+
+        duckdb "$DATABASE" -c "
+    INSERT INTO listed_dids (did, label, date) VALUES ('$did', '$label', '$today');
+    "
+
+        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+        add_list_item "$list" "$did"
+
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/list.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            create_profile_label "$did" "$label"
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            create_profile_label "$did" "$label"
+        fi
+    done
+
+    # Update List for Inverted Red Triangle
+    dids=$(duckdb "$DATABASE" -jsonlines -c "
+        SELECT DISTINCT did
+        FROM labeled_dids
+        WHERE label = 'hammer-sickle' AND did NOT IN (
+            SELECT did
+            FROM whitelist
+            ) AND did NOT IN (
+            SELECT did
+            FROM listed_dids
+            WHERE label = 'hammer-sickle'
+            );" | jq -r '.[]')
+
+    label="hammer-sickle"
+    list=at://did:plc:e4elbtctnfqocyfcml6h2lf7/app.bsky.graph.list/3l4ue6w2aur2v
+
+    for did in $dids; do
+        log "Adding $did to list: $list."
+
+        duckdb "$DATABASE" -c "
+    INSERT INTO listed_dids (did, label, date) VALUES ('$did', '$label', '$today');
+    "
+
+        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+        add_list_item "$list" "$did"
+
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/list.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            create_profile_label "$did" "$label"
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            create_profile_label "$did" "$label"
+        fi
+    done
+
+    # Update List for MAGA / Pro-Trump
+    label="maga-trump"
+    list=at://did:plc:e4elbtctnfqocyfcml6h2lf7/app.bsky.graph.list/3l53cjwlt4o2s
+
+    get_label_events "$label"
+    dids=$(echo "$response" | jq -r '.events[].subject.did')
+
+    for did in $dids; do
+        log "Adding $did to list: $list."
+
+        duckdb "$DATABASE" -c "
+    INSERT INTO listed_dids (did, label, date) VALUES ('$did', '$label', '$today');
+    "
+
+        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+        add_list_item "$list" "$did"
+
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/list.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            create_profile_label "$did" "$label"
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            create_profile_label "$did" "$label"
+        fi
+    done
+
+}
