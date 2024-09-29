@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 source config.sh
+source lib/functions
 process="COLLECT_DIDS"
 logfile="collect_dids_$(date +"%Y-%m-%d").log"
 log "Script started."
