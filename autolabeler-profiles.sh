@@ -9,13 +9,13 @@ process="PROFILE_AUTOLABELER"
 logfile=autolabeler.log
 
 # Source Modules
-source "$MODULES/auth"
-source "$MODULES/functions"
-source "$MODULES/label_profiles"
-source "$MODULES/create_reports"
-source "$MODULES/update_lists"
-source "$MODULES/process_dids"
-source "$MODULES/process_users"
+source lib/auth
+source lib/functions"
+source lib/label_profiles
+source lib/create_reports
+source lib/update_lists
+source lib/process_dids
+source lib/process_users
 
 log "Script started."
 
