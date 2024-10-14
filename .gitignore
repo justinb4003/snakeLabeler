@@ -17,3 +17,5 @@ fix.sh
 test_data/*
 test_data
 *.sql
+cleanup.sh
+cleanup

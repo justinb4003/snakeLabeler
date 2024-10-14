@@ -1,50 +1,46 @@
 #!/usr/bin/env bash
 
-source settings.sh
+source config.sh
+source lib/functions
 process="COLLECT_DIDS"
-logfile=collect_dids.log
+logfile="collect_dids_$(date +"%Y-%m-%d").log"
 log "Script started."
 
 function write {
-    jq -nc --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S%z")" --arg date "$(date +"%Y-%m-%d")" --arg did "$did" --arg english "$english" --arg whitelist "$whitelist" --arg flagged "$flagged" '{"timestamp": $timestamp, "date": $date, "did": $did, "english": $english, "whitelist": $whitelist, "flagged": $flagged}'
+    jq -nc --arg timestamp "$(date +"%Y-%m-%d %H:%M:%S%z")" --arg date "$(date +"%Y-%m-%d")" --arg did "$did" --arg langs "$langs" --arg flagged "$flagged" --arg whitelist "$whitelist" '{"timestamp": $timestamp, "date": $date, "did": $did, "langs": $langs, "flagged": $flagged, "whitelist": $whitelist}'
 }
 
 function process {
     local json="$1"
+    local opType
+    local did
+    local langs
+    local whitelist
+    local flagged
 
-    # Extract the DID and language from the post
-    did=$(echo "$json" | jq -r '.did')
-    langs=$(echo "$json" | jq -r '.commit.record.langs.[]')
+        # Extract the DID and language from the post
+        did=$(echo "$json" | jq -r '.did')
+        langs=$(echo "$json" | jq -r '.record.langs | join("|")')
 
-    english=0
-    whitelist=0
-    flagged=0
-    for l in $langs; do
-        if echo "$l" | grep -iE 'en' >/dev/null; then
-            english=1
-        elif echo "$l" | grep -iE 'es|fr|de|it|nl|pl|ru|uk' >/dev/null; then
-            log "DID $did has language $l."
+        whitelist=0
+        flagged=0
+        if echo "$langs" | grep -iE 'en|es|fr|de|it|nl|pl|ru|uk' >/dev/null; then
             flagged=1
         fi
-        if echo "$l" | grep -iE 'pt|ja' >/dev/null; then
+        if echo "$langs" | grep -iE 'pt|ja|fa|ps' >/dev/null; then
             whitelist=1
         fi
-    done
 
-    if [ "$english" -eq 0 ] && [ "$flagged" -eq 0 ]; then
-        log "DID $did not flagged."
-    fi
-
-    if [ "$english" -eq 1 ]; then
-        log "DID $did is in English."
-        echo "$(write)" >> "dids_$(date +"%Y-%m-%d").json"
-    elif [ "$flagged" -eq 1 ]; then
-        log "DID $did flagged."
-        echo "$(write)" >> "dids_$(date +"%Y-%m-%d").json"
-    fi
+        if [ "$flagged" -eq 1 ]; then
+            log "DID $did flagged for languages: $langs"
+            echo "$(write)" >>"dids_$(date +"%Y-%m-%d").json"
+        fi
 }
 
 # Stream records and process each one
 websocat -t - autoreconnect:ws://localhost:6008/subscribe?wantedCollections=app.bsky.feed.post | while read -r post; do
-    process "$post"
+    opType=$(echo "$post" | jq -r '.opType')
+    if [ "$opType" == "c" ]; then
+        process "$post"
+    fi
 done

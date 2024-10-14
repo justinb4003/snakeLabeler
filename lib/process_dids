@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+function process_dids {
+    log "Processing dids for $today."
+
+    local c1
+    local c2
+
+    duckdb "$DATABASE" -c "
+    COPY users FROM '$file';
+"
+
+    c1=$(duckdb "$DATABASE" -json -c "
+    SELECT COUNT(*) as count
+    FROM users
+    WHERE date = '$today' AND flagged = 1 and whitelist = 0;
+    " | jq -r '.[0].count')
+
+    log "Added $c1 dids on $today."
+
+    duckdb "$DATABASE" -c "
+    CREATE OR REPLACE TABLE unique_dids AS
+    SELECT DISTINCT did FROM users
+    WHERE DATE = '$today' AND flagged = 1 and whitelist = 0;
+    "
+    c2=$(duckdb "$DATABASE" -json -c "
+    SELECT COUNT(*) as count
+    FROM unique_dids;
+    " | jq -r '.[0].count')
+
+    log "$c2 new unique dids observed on $today."
+
+    log "Cleaning up."
+    tar -czvf "dids_$today".tar.gz "dids_$today".json
+    log "Done processing dids."
+}

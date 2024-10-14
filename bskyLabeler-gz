@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+
+# Source Credentials --- Note that this is not secure and will leak
+# Goal is just to keep them off github
+source .env
+echo "$BLUESKY_HANDLE"
+echo "$BLUESKY_APP_PASSWORD"
+
+source config.sh
+source lib/auth
+source lib/functions
+
+process="BSKY_PROPAGANDA_LINK_LABELER"
+logfile=propaganda_link.log
+
+log "Script started."
+
+# Fetch the access JWT
+log "Authenticating with Bluesky."
+auth "$BLUESKY_HANDLE" "$BLUESKY_APP_PASSWORD"
+
+# Initialize variables for rate limiting
+LABEL_LIMIT_REMAINING=3000
+LABEL_LIMIT_RESET=0
+
+log2() {
+    jq -nc --arg timestamp "$(date +"%s")" --arg date "$(date +"%Y-%m-%dT%H:%M:%S%z")" --arg did "$did" --arg url "$url" --arg link "$link" --arg cid "$cid" --arg rkey "$rkey" '{"timestamp": $timestamp, "date": $date, "level": "INFO", "did": $did, "url": $url, "uri": $link, "cid": $cid, "rkey": $rkey}'
+}
+
+# Function to process each post
+function process_post() {
+    local json="$1"
+    local did
+    local rkey
+    local cid
+    local link
+    local urls
+    local type
+    local found
+
+    facet=$(echo "$json" | jq '.record | has("facets")')
+    if [ "$facet" = "true" ]; then
+        type=$(echo "$json" | jq '[.record.facets[].features[] | select(."$type" == "app.bsky.richtext.facet#link")] | length > 0')
+        if [ "$type" = "true" ]; then
+            urls=$(echo "$json" | jq -r '
+                .record.facets[]
+                | .features[]
+                | select(."$type" == "app.bsky.richtext.facet#link")
+                | .uri')
+
+            # Check if any URIs match the specified domains
+            found=0
+            for url in $urls; do
+                if echo "$url" | grep -iE 'thegrayzone\.com|grayzoneproject\.com|mintpressnews\.com|21stcenturywire\.com|www\.globalresearch\.ca|globalresearch\.ca|journal-neo\.su|theWallWillFall\.org|beeley\.substack\.com|\.rt\.com|sputniknews\.com|zerohedge\.com|theduran\.com|\.unz\.com|presstv\.ir|www\.presstv\.ir|x\.com\/Partisangirl' >/dev/null; then
+                    found=1
+                    echo "$json" >>flagged_gz_posts.json
+                    rkey=$(echo "$json" | jq -r '.rkey')
+                    did=$(echo "$json" | jq -r '.did')
+                    link=$(echo "$json" | jq -r '"at://" + .did + "/app.bsky.feed.post/" + .rkey')
+                    cid=$(get_post_record "$did" "$rkey" | jq -r '.cid')
+
+                    if [ -z "$cid" ]; then
+                        log "CID is empty, continuing."
+                        continue
+                    else
+
+                        log "Propaganda link $url found at $link with CID $cid."
+                        echo "$(log2)" >>propaganda_flag_log.json
+
+                        # Create a label
+                        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+
+                        create_label "$link" "$cid" "disinformation-network"
+                        log "Label creation response: $response"
+                        echo "$response" >>gz_log.json
+                        expiredJWT_Check "$response"
+
+                        if [ "$tokenExpired" -eq 1 ]; then
+                            create_label "$link" "$cid" "disinformation-network"
+                            log "Label creation response after token refresh: $response"
+                            echo "$response" >>gz_log.json
+                        fi
+                        if [ "$tokenInvalid" -eq 1 ]; then
+                            create_label "$link" "$cid" "disinformation-network"
+                            log "Label creation response after token refresh: $response"
+                            echo "$response" >>gz_log.json
+                        fi
+
+                    fi
+                fi
+            done
+        fi
+    fi
+
+}
+
+# Stream records and process each one
+websocat -t -S - autoreconnect:ws://localhost:6008/subscribe?wantedCollections=app.bsky.feed.post | while read -r post; do
+    opType=$(echo "$post" | jq -r '.opType')
+    if [ "$opType" == "c" ]; then
+        process_post "$post"
+    fi
+done

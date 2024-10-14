@@ -1,0 +1,62 @@
+function create_reports() {
+    local dids
+
+    dids=$(duckdb "$DATABASE" -jsonlines -c "
+    SELECT DISTINCT did
+    FROM reports
+    WHERE flag = 'maga-trump' AND did NOT IN (
+        SELECT did
+        FROM reported_dids
+        WHERE label = 'maga-trump'
+    );" | jq -r '.[]')
+
+    for did in $dids; do
+        log "Flagging $did as maga-trump."
+        duckdb "$DATABASE" -c "INSERT INTO reported_dids (did, label, date) VALUES ('$did', 'maga-trump', '$today');"
+
+        report_profile "$did" "MAGA or Trump Mentioned"
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/label.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            report_profile "$did" "MAGA or Trump Mentioned"
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            report_profile "$did" "MAGA or Trump Mentioned"
+        fi
+
+    done
+
+    dids=$(duckdb "$DATABASE" -jsonlines -c "
+    SELECT DISTINCT did
+    FROM reports
+    WHERE flag = 'zeta' AND did NOT IN (
+        SELECT did
+        FROM reported_dids
+        WHERE label = 'zeta'
+    ) AND did NOT IN (
+        SELECT did
+        FROM whitelist
+    );" | jq -r '.[]')
+
+    for did in $dids; do
+        log "Flagging $did as zeta."
+        duckdb "$DATABASE" -c "INSERT INTO reported_dids (did, label, date) VALUES ('$did', 'zeta', '$today');"
+
+        report_profile "$did" "Zeta in diplayName or description"
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/label.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            report_profile "$did" "Zeta in diplayName or description"
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            report_profile "$did" "Zeta in diplayName or description"
+        fi
+
+    done
+}
