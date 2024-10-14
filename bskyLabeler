@@ -39,7 +39,6 @@ function process_post() {
     local type
     local found
     local whitelist
-    local alt_tech
 
     facet=$(echo "$json" | jq '.record | has("facets")')
     if [ "$facet" = "true" ]; then
@@ -103,44 +102,6 @@ function process_post() {
                         fi
                     fi
                 fi
-                alt_tech=0
-                if echo "$url" | grep -E 'givesendgo\.com' >/dev/null; then
-                    alt_tech=1
-                    echo "$json" >>flagged_posts-at.json
-                    rkey=$(echo "$json" | jq -r '.rkey')
-                    did=$(echo "$json" | jq -r '.did')
-                    link=$(echo "$json" | jq -r '"at://" + .did + "/app.bsky.feed.post/" + .rkey')
-                    cid=$(get_post_record "$did" "$rkey" | jq -r '.cid')
-
-                    if [ -z "$cid" ]; then
-                        log "CID is empty, continuing."
-                        continue
-                    else
-
-                        whitelist=0
-                        log "Alt-Tech Fundraising link $url found at $link with CID $cid."
-                        echo "$(log2)" >>flag_log.json
-
-                        # Create a label
-                        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-
-                        create_label "$link" "$cid" "fundraising-link-at"
-                        log "Label creation response: $response"
-                        echo "$response" >>log-at.json
-                        expiredJWT_Check "$response"
-
-                        if [ "$tokenExpired" -eq 1 ]; then
-                            create_label "$link" "$cid" "fundraising-link-at"
-                            log "Label creation response after token refresh: $response"
-                            echo "$response" >>log.json
-                        fi
-                        if [ "$tokenInvalid" -eq 1 ]; then
-                            create_label "$link" "$cid" "fundraising-link-at"
-                            log "Label creation response after token refresh: $response"
-                            echo "$response" >>log.json
-                        fi
-                    fi
-                fi
             done
         fi
     fi
@@ -149,5 +110,8 @@ function process_post() {
 
 # Stream records and process each one
 websocat -t - autoreconnect:ws://localhost:6008/subscribe?wantedCollections=app.bsky.feed.post | while read -r post; do
-    process_post "$post"
+    opType=$(echo "$post" | jq -r '.opType')
+    if [ "$opType" == "c" ]; then
+        process_post "$post"
+    fi
 done

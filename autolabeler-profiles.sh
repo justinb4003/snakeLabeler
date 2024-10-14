@@ -10,7 +10,7 @@ logfile=autolabeler.log
 
 # Source Modules
 source lib/auth
-source lib/functions"
+source lib/functions
 source lib/label_profiles
 source lib/create_reports
 source lib/update_lists
