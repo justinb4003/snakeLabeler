@@ -18,13 +18,18 @@ function process_dids {
     log "Added $c1 dids on $today."
 
     duckdb "$DATABASE" -c "
-    CREATE OR REPLACE TABLE unique_dids AS
-    SELECT DISTINCT did FROM users
-    WHERE DATE = '$today' AND flagged = 1 and whitelist = 0;
+    WITH todays_dids AS (
+            SELECT DISTINCT did FROM users
+            WHERE DATE = '$today' AND flagged = 1 and whitelist = 0
+        ) SELECT * FROM unique_dids
+          UNION ALL
+          SELECT * FROM todays_dids;
     "
+
     c2=$(duckdb "$DATABASE" -json -c "
     SELECT COUNT(*) as count
-    FROM unique_dids;
+    FROM unique_dids
+    WHERE date = '$today';
     " | jq -r '.[0].count')
 
     log "$c2 new unique dids observed on $today."

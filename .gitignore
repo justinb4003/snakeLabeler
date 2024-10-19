@@ -19,3 +19,4 @@ test_data
 *.sql
 cleanup.sh
 cleanup
+list_updater

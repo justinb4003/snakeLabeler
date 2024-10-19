@@ -102,10 +102,10 @@ function process_users {
         fi
 
         # Swastika
-        if echo "$displayName" | grep -iE '卐' >/dev/null; then
+        if echo "$displayName" | grep -iE '卐|\b1488\b' >/dev/null; then
             swastika=1
             log "Flagged DID: $did with swastika in displayName."
-        elif echo "$description" | grep -iE '卐' >/dev/null; then
+        elif echo "$description" | grep -iE '卐|\b1488\b' >/dev/null; then
             swastika=1
             log "Flagged DID: $did with swastika in description."
         fi
@@ -134,16 +134,16 @@ function process_users {
         fi
 
         # TRUMP
-        if echo "$displayName" | grep -E '\bMAGA\b' >/dev/null; then
+        if echo "$displayName" | grep -E '\bMAGA\b|MAGA2024|#MAGA2024|#MAGA' >/dev/null; then
             trump=1
             log "Flagged DID: $did for MAGA in displayName."
-        elif echo "$displayName" | grep -iE '\bTRUMP\b|TRUMP 2024|TRUMP 2024🇺🇸' >/dev/null; then
+        elif echo "$displayName" | grep -iE '\bTRUMP\b|TRUMP 2024|TRUMP 2024🇺🇸|#TRUMP|#TRUMP2024|TPUSA' >/dev/null; then
             trump=1
             log "Flagged DID: $did for Trump in displayName."
-        elif echo "$description" | grep -E '\bMAGA\b' >/dev/null; then
+        elif echo "$description" | grep -E '\bMAGA\b|MAGA2024|#MAGA2024|#MAGA' >/dev/null; then
             trump=1
             log "Flagged DID: $did for MAGA in description."
-        elif echo "$description" | grep -iE '\bTRUMP\b|TRUMP 2024|TRUMP 2024🇺🇸' >/dev/null; then
+        elif echo "$description" | grep -iE '\bTRUMP\b|TRUMP 2024|TRUMP 2024🇺🇸|#TRUMP|#TRUMP2024|TRUMP2024|TPUSA' >/dev/null; then
             trump=1
             log "Flagged DID: $did for Trump in description."
         fi
