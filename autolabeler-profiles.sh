@@ -36,6 +36,16 @@ function main {
     # Process DIDS
     process_dids
 
+    for i in $(seq 0 23); do
+        log "Processing DIDs for hour $i."
+
+        duckdb "$ROOT/tmp/tmp_$i.db" -c "
+            CREATE TABLE unique_dids AS
+            * FROM parquet('$ROOT/tmp/dids_$i.parquet');
+        "
+    done
+
+    for i in $(seq 0 23); do
     length=$(duckdb "$DATABASE" -json -c "
     SELECT COUNT(*) as count
     FROM unique_dids;
@@ -44,11 +54,30 @@ function main {
     start=0
     end=24
 
-    log "$length unique dids observed."
+    log "$length unique dids observed in hour $i."
 
     while [ "$start" -le "$length" ]; do
-        process_users
+
+        process_dids $i $start $end &
+        pid$i=$!
+
+        # Wait for every fourth process to finish
+        if ((i % 4 == 3)); then
+            wait ${pid[i - 3]}
+            wait ${pid[i - 2]}
+            wait ${pid[i - 1]}
+            wait ${pid[i]}
+        fi
     done
+done
+
+    # Ensure any remaining processes (if the total is not a multiple of 4) are waited for
+    wait
+
+    # Consolidate the processed DIDs
+    duckdb "$DATABASE" -c "COPY reports FROM '$ROOT/tmp/reports_*.parquet';"
+    #rm -f "$ROOT/tmp/reports_*.parquet"
+    #rm -f "$ROOT/tmp/tmp_*.db"
 
     label_profiles
     create_reports

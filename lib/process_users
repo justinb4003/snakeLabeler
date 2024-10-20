@@ -9,12 +9,15 @@ function process_users {
     local swastika
     local dinosaur
     local trump
+    local DB
 
     if [ "$end" -ge "$length" ]; then
         end="$length"
     fi
 
-    dids=$(duckdb "$DATABASE" -json -c "
+    DB="$ROOT/tmp/tmp_$i.db"
+
+    dids=$(duckdb "$DB" -json -c "
                     SELECT DISTINCT did
                     FROM unique_dids
                     WHERE rowid BETWEEN ${start} AND ${end};
@@ -41,6 +44,7 @@ function process_users {
         did=$(echo "$profile" | jq -r '.did')
         displayName=$(echo "$profile" | jq -r '.displayName' | tr -d '\n')
         description=$(echo "$profile" | jq -r '.description' | tr -d '\n')
+        handle=$(echo "$profile" | jq -r '.handle' | tr -d '\n')
         labelYN=$(echo "$profile" | jq -r '.labels == []')
         if [ "$labelYN" = "false" ]; then
             labels=$(echo "$profile" | jq -r '[.labels[].val] | join(" ")')
@@ -63,7 +67,7 @@ function process_users {
         fi
 
         if [ "$zeta" -eq 1 ]; then
-            duckdb "$DATABASE" -c "
+            duckdb "$DB" -c "
                     INSERT INTO reports
                         VALUES ('${did}', '${displayName}', '${description}', '${labels}', 'zeta',  '$(date +"%Y-%m-%d %H:%M:%S%z")');
                     "
@@ -79,7 +83,7 @@ function process_users {
         fi
 
         if [ "$hammer_sickle" -eq 1 ]; then
-            duckdb "$DATABASE" -c "
+            duckdb "$DB" -c "
                     INSERT INTO reports
                         VALUES ('${did}', '${displayName}', '${description}', '${labels}', 'hammer-sickle', '$(date +"%Y-%m-%d %H:%M:%S%z")');
                     "
@@ -95,7 +99,7 @@ function process_users {
         fi
 
         if [ "$triangle" -eq 1 ]; then
-            duckdb "$DATABASE" -c "
+            duckdb "$DB" -c "
                     INSERT INTO reports
                         VALUES ('${did}', '${displayName}', '${description}', '${labels}', 'triangle',  '$(date +"%Y-%m-%d %H:%M:%S%z")');
                     "
@@ -111,7 +115,7 @@ function process_users {
         fi
 
         if [ "$swastika" -eq 1 ]; then
-            duckdb "$DATABASE" -c "
+            duckdb "$DB" -c "
                     INSERT INTO reports
                         VALUES ('${did}', '${displayName}', '${description}', '${labels}', 'swastika',  '$(date +"%Y-%m-%d %H:%M:%S%z")');
                     "
@@ -127,7 +131,7 @@ function process_users {
         fi
 
         if [ "$dinosaur" -eq 1 ]; then
-            duckdb "$DATABASE" -c "
+            duckdb "$DB" -c "
                     INSERT INTO reports
                         VALUES ('${did}', '${displayName}', '${description}', '${labels}', 'dinosaur-emoji',  '$(date +"%Y-%m-%d %H:%M:%S%z")');
                     "
@@ -149,11 +153,14 @@ function process_users {
         fi
 
         if [ "$trump" -eq 1 ]; then
-            duckdb "$DATABASE" -c "
+            duckdb "$DB" -c "
                     INSERT INTO reports
                         VALUES ('${did}', '${displayName}', '${description}', '${labels}', 'maga-trump',  '$(date +"%Y-%m-%d %H:%M:%S%z")');
                     "
         fi
     done
+
+    duckdb "$DB" -c "COPY reports TO '$ROOT/tmp/reports_$i.parquet' (FORMAT 'parquet');"
+    log "Done processing users."
 }
 

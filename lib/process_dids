@@ -16,14 +16,25 @@ function process_dids {
 
     log "Added $c1 dids on $today."
 
+    for i in $(seq 0 23); do
+        echo "Processing number $i"
+
     duckdb "$DATABASE" -c "
-    CREATE OR REPLACE TABLE unique_dids AS
-    SELECT DISTINCT did FROM users
-    WHERE DATE = '$today' AND flagged = 1 and whitelist = 0;
+   COPY (SELECT DISTINCT did
+          FROM users
+          WHERE DATE = '$today'
+            AND flagged = 1
+            AND whitelist = 0
+            AND date_part('hour', timestamp) = $i
+    ) TO '$ROOT/tmp/dids_$i.parquet' (FORMAT 'parquet');
     "
+    done
 
     c2=$(duckdb "$DATABASE" -json -c "
-    SELECT COUNT(*) as count
+    WITH unique_dids AS (
+    SELECT DISTINCT did FROM users
+    WHERE DATE = '$today' AND flagged = 1 and whitelist = 0
+    ) SELECT COUNT(*) as count
     FROM unique_dids;
     " | jq -r '.[0].count')
 
