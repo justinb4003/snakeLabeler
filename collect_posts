@@ -24,10 +24,10 @@ function process {
 
         whitelist=0
         flagged=0
-        if echo "$langs" | grep -iE 'en|es|fr|de|it|nl|pl|ru|uk' >/dev/null; then
+        if echo "$langs" | grep -iE 'en|es|fr|de|it|nl|pl|ru|uk' >/dev/null 2>/dev/null; then
             flagged=1
         fi
-        if echo "$langs" | grep -iE 'pt|ja|fa|ps' >/dev/null; then
+        if echo "$langs" | grep -iE 'pt|ja|fa|ps' >/dev/null 2>/dev/null; then
             whitelist=1
         fi
 

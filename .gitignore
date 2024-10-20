@@ -24,3 +24,5 @@ tmp
 data
 tmp/*
 data/*
+*.out
+*.err

@@ -54,10 +54,10 @@ function process_users {
         trump=0
 
         # Zeta
-        if echo "$displayName" | grep -iE '\bζ\b' >/dev/null; then
+        if echo "$displayName" | grep -iE '\bζ\b' >/dev/null 2>/dev/null; then
             zeta=1
             log "Flagged DID: $did with zeta in displayName."
-        elif echo "$description" | grep -iE '\bζ\b' >/dev/null; then
+        elif echo "$description" | grep -iE '\bζ\b' >/dev/null 2>/dev/null; then
             zeta=1
             log "Flagged DID: $did with zeta in description."
         fi
@@ -70,10 +70,10 @@ function process_users {
         fi
 
         # Hammer and Sickle
-        if echo "$displayName" | grep -iE '☭' >/dev/null; then
+        if echo "$displayName" | grep -iE '☭' >/dev/null 2>/dev/null; then
             hammer_sickle=1
             log "Flagged DID: $did with hammer and sickle in displayName."
-        elif echo "$description" | grep -iE '☭' >/dev/null; then
+        elif echo "$description" | grep -iE '☭' >/dev/null 2>/dev/null; then
             hammer_sickle=1
             log "Flagged DID: $did with hammer and sickle in description."
         fi
@@ -86,10 +86,10 @@ function process_users {
         fi
 
         # Triangle
-        if echo "$displayName" | grep -iE '🔻' >/dev/null; then
+        if echo "$displayName" | grep -iE '🔻' >/dev/null 2>/dev/null; then
             triangle=1
             log "Flagged DID: $did with inverted red triangle in displayName."
-        elif echo "$description" | grep -iE '🔻' >/dev/null; then
+        elif echo "$description" | grep -iE '🔻' >/dev/null 2>/dev/null; then
             triangle=1
             log "Flagged DID: $did with inverted red triangle in description."
         fi
@@ -102,19 +102,19 @@ function process_users {
         fi
 
         # TRUMP
-        if echo "$displayName" | grep -E '\bMAGA\b|MAGA2024|#MAGA2024|#MAGA' >/dev/null; then
+        if echo "$displayName" | grep -E '\bMAGA\b|MAGA2024|#MAGA2024|#MAGA' >/dev/null 2>/dev/null; then
             trump=1
             log "Flagged DID: $did for MAGA in displayName."
-        elif echo "$displayName" | grep -iE '\bTRUMP\b|TRUMP 2024|TRUMP 2024🇺🇸|#TRUMP|#TRUMP2024|TPUSA' >/dev/null; then
+        elif echo "$displayName" | grep -iE '\bTRUMP\b|TRUMP 2024|TRUMP 2024🇺🇸|#TRUMP|#TRUMP2024|TPUSA' >/dev/null 2>/dev/null; then
             trump=1
             log "Flagged DID: $did for Trump in displayName."
-        elif echo "$description" | grep -E '\bMAGA\b|MAGA2024|#MAGA2024|#MAGA' >/dev/null; then
+        elif echo "$description" | grep -E '\bMAGA\b|MAGA2024|#MAGA2024|#MAGA' >/dev/null 2>/dev/null; then
             trump=1
             log "Flagged DID: $did for MAGA in description."
-        elif echo "$description" | grep -iE '\bTRUMP\b|TRUMP 2024|TRUMP 2024🇺🇸|#TRUMP|#TRUMP2024|TRUMP2024|TPUSA' >/dev/null; then
+        elif echo "$description" | grep -iE '\bTRUMP\b|TRUMP 2024|TRUMP 2024🇺🇸|#TRUMP|#TRUMP2024|TRUMP2024|TPUSA' >/dev/null 2>/dev/null; then
             trump=1
             log "Flagged DID: $did for Trump in description."
-        elif echo "$handle" | grep -iE "MAGA|MAGA2024|TRUMP|TRUMP2024" >/dev/null; then
+        elif echo "$handle" | grep -iE "MAGA|MAGA2024|TRUMP|TRUMP2024" >/dev/null 2>/dev/null; then
             trump=1
             log "Flagged DID: $did for MAGA in handle."
         fi
@@ -130,10 +130,10 @@ function process_users {
     # Watchlist: Not actually labeling these yet, but collecting data
     # Dinosaur
     dinosaur=0
-    if echo "$displayName" | grep -iE 'Feminist🦖|Feminist 🦖' >/dev/null; then
+    if echo "$displayName" | grep -iE 'Feminist🦖|Feminist 🦖' >/dev/null 2>/dev/null; then
         dinosaur=1
         log "Flagged DID: $did with Dinosaur Emoji in displayName."
-    elif echo "$description" | grep -iE 'Feminist🦖|Feminist 🦖' >/dev/null; then
+    elif echo "$description" | grep -iE 'Feminist🦖|Feminist 🦖' >/dev/null 2>/dev/null; then
         dinosaur=1
         log "Flagged DID: $did with Dinosaur Emoji in description."
     fi
@@ -146,10 +146,10 @@ function process_users {
     fi
 
     cross=0
-    if echo "$displayName" | grep -iE '☦️' >/dev/null; then
+    if echo "$displayName" | grep -iE '☦️|Christian Vtuber' >/dev/null 2>/dev/null; then
         cross=1
         log "Flagged DID: $did with cross-emoji in displayName."
-    elif echo "$description" | grep -iE '☦️' >/dev/null; then
+    elif echo "$description" | grep -iE '☦️|Christian Vtuber' >/dev/null 2>/dev/null; then
         cross=1
         log "Flagged DID: $did with cross-emoji in description."
     fi
@@ -162,13 +162,13 @@ function process_users {
     fi
 
     # Swastika
-    if echo "$displayName" | grep -iE '卐|1488|⚡{2,}' >/dev/null; then
+    if echo "$displayName" | grep -iE '卐|1488|⚡{2,}' >/dev/null 2>/dev/null; then
         swastika=1
         log "Flagged DID: $did with swastika in displayName."
-    elif echo "$description" | grep -iE '卐|1488|⚡{2,}' >/dev/null; then
+    elif echo "$description" | grep -iE '卐|1488|⚡{2,}' >/dev/null 2>/dev/null; then
         swastika=1
         log "Flagged DID: $did with swastika in description."
-    elif echo "$handle" | grep -iE '卐|1488' >/dev/null; then
+    elif echo "$handle" | grep -iE '1488' >/dev/null 2>/dev/null; then
         swastika=1
         log "Flagged DID: $did with swastika in handle."
     fi
