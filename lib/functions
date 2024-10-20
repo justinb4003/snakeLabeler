@@ -248,7 +248,7 @@ function get_label_events() {
     tmp_headers=$(mktemp)
     tmp_body=$(mktemp)
 
-    curl -v "https://blewit.us-west.host.bsky.network/xrpc/tools.ozone.moderation.queryEvents?limit=100&includeAllUserRecords=false&createdAfter=$(date -d "$date -1 days" +"%Y-%m-%d")T04:00:00.000Z&createdBefore=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")&addedLabels=$LBL&types=tools.ozone.moderation.defs%23modEventLabel" \
+    curl -sS -v "https://blewit.us-west.host.bsky.network/xrpc/tools.ozone.moderation.queryEvents?limit=100&includeAllUserRecords=false&createdAfter=$(date -d "$date -1 days" +"%Y-%m-%d")T04:00:00.000Z&createdBefore=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")&addedLabels=$LBL&types=tools.ozone.moderation.defs%23modEventLabel" \
         -H "authorization: Bearer $accessJwt" \
         -H 'Accept: */*' \
         -H 'Accept-Encoding: identity' \
@@ -282,7 +282,7 @@ function add_list_item() {
     tmp_headers=$(mktemp)
     tmp_body=$(mktemp)
 
-    curl -v 'https://blewit.us-west.host.bsky.network/xrpc/com.atproto.repo.createRecord' \
+    curl -sS -v 'https://blewit.us-west.host.bsky.network/xrpc/com.atproto.repo.createRecord' \
         -H 'atproto-accept-labelers: did:plc:ar7c4by46qjdydhdevvrndac;redact' \
         -H "authorization: Bearer $accessJwt" \
         -H 'Accept-Encoding: identity' \

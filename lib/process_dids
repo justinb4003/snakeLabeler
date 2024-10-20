@@ -5,8 +5,8 @@ function process_dids {
     local c1
     local c2
 
-    duckdb "$DATABASE" -c "
-    COPY users FROM '$file';"
+    duckdb "$DATABASE" -c "COPY users FROM '$file';"
+    duckdb "$DATABASE" -c "COPY users TO 'data/dids_2024-snappy.parquet' (FORMAT 'parquet');"
 
     c1=$(duckdb "$DATABASE" -json -c "
     SELECT COUNT(*) as count
@@ -18,8 +18,31 @@ function process_dids {
 
     duckdb "$DATABASE" -c "
     CREATE OR REPLACE TABLE unique_dids AS
-    SELECT DISTINCT did FROM users
-    WHERE DATE = '$today' AND flagged = 1 and whitelist = 0;
+    WITH unique_dids AS (
+    SELECT DISTINCT did, date
+    FROM users
+    WHERE flagged = 1 and whitelist = 0
+), spans AS
+(
+    SELECT
+    did,
+    first_value(date) OVER (PARTITION BY did ORDER BY date) AS first_seen,
+    last_value(date) OVER (PARTITION BY did ORDER BY date) AS last_seen,
+    lag(date) OVER (PARTITION BY did ORDER BY date) AS previous_date,
+    count(*) OVER (PARTITION BY did) AS total_obs
+FROM unique_dids
+), span_final AS
+(SELECT
+    did,
+    min(first_seen) as first_seen,
+    max(last_seen) as last_seen,
+    max(previous_date) as prev_seen,
+    total_obs
+FROM spans
+GROUP BY 1, 5
+ORDER BY first_seen
+) SELECT * FROM span_final
+  WHERE last_seen = '$today' AND (date_diff('day', prev_seen, last_seen) > 1 OR prev_seen IS NULL);
     "
 
     c2=$(duckdb "$DATABASE" -json -c "

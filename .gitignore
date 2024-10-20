@@ -20,3 +20,7 @@ test_data
 cleanup.sh
 cleanup
 list_updater
+tmp
+data
+tmp/*
+data/*

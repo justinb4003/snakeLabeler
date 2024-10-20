@@ -51,11 +51,11 @@ function update_lists() {
 
         if [ "$tokenExpired" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            add_list_item "$list" "$did"
         fi
         if [ "$tokenInvalid" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            add_list_item "$list" "$did"
         fi
     done
 
@@ -90,11 +90,11 @@ function update_lists() {
 
         if [ "$tokenExpired" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            add_list_item "$list" "$did"
         fi
         if [ "$tokenInvalid" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            add_list_item "$list" "$did"
         fi
     done
 
@@ -120,11 +120,11 @@ function update_lists() {
 
         if [ "$tokenExpired" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            add_list_item "$list" "$did"
         fi
         if [ "$tokenInvalid" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            add_list_item "$list" "$did"
         fi
     done
 
@@ -150,11 +150,11 @@ function update_lists() {
 
         if [ "$tokenExpired" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            add_list_item "$list" "$did"
         fi
         if [ "$tokenInvalid" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            add_list_item "$list" "$did"
         fi
     done
 
@@ -180,12 +180,41 @@ function update_lists() {
 
         if [ "$tokenExpired" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            add_list_item "$list" "$did"
         fi
         if [ "$tokenInvalid" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            add_list_item "$list" "$did"
         fi
     done
 
+# Update List for Nazi Symbolism
+    label="nazi-symbolism"
+    list=at://did:plc:e4elbtctnfqocyfcml6h2lf7/app.bsky.graph.list/3l6vdudxgeb2z
+
+    get_label_events "$label"
+    dids=$(echo "$response" | jq -r '.events[].subject.did')
+
+    for did in $dids; do
+        log "Adding $did to list: $list."
+
+        duckdb "$DATABASE" -c "
+    INSERT INTO listed_dids (did, label, date) VALUES ('$did', '$label', '$today');
+    "
+
+        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+        add_list_item "$list" "$did"
+
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/list.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            add_list_item "$list" "$did"
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            add_list_item "$list" "$did"
+        fi
+    done
 }
