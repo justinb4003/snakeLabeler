@@ -1,0 +1,188 @@
+#!/usr/bin/env bash
+
+# Source Credentials --- Note that this is not secure and will leak
+# Goal is just to keep them off github
+source .env
+source config.sh
+
+process="NEGATE_LABELS"
+logfile=negate_labels.log
+
+# Source Modules
+source lib/auth
+source lib/functions
+
+log "Script started."
+
+# Negate label
+function negate_profile_label() {
+    local DID=$1
+    local LBL=$2
+
+    # Create temporary files to store headers and body
+    tmp_headers=$(mktemp)
+    tmp_body=$(mktemp)
+
+    curl -v 'https://blewit.us-west.host.bsky.network/xrpc/tools.ozone.moderation.emitEvent' \
+        -H 'accept: */*' \
+        -H 'accept-language: en-US,en;q=0.9' \
+        -H 'atproto-accept-labelers: did:plc:ar7c4by46qjdydhdevvrndac;redact' \
+        -H 'atproto-proxy: did:plc:e4elbtctnfqocyfcml6h2lf7#atproto_labeler' \
+        -H 'Accept-Encoding: identity' \
+        -H "authorization: Bearer $accessJwt" \
+        -H 'content-type: application/json' \
+        -H 'origin: https://ozone.mountainherder.xyz' \
+        -H 'priority: u=1, i' \
+        -H 'referer: https://ozone.mountainherder.xyz/' \
+        --data-raw "{\"subject\":{\"\$type\":\"com.atproto.admin.defs#repoRef\",\"did\":\"$DID\"},\"createdBy\":\"did:plc:e4elbtctnfqocyfcml6h2lf7\",\"subjectBlobCids\":[],\"event\":{\"\$type\":\"tools.ozone.moderation.defs#modEventLabel\",\"createLabelVals\":[],\"negateLabelVals\":[\"$LBL\"]}}" -o "$tmp_body" 2>"$tmp_headers"
+
+    # Extract the rate limit information from the headers
+    LABEL_LIMIT_REMAINING=$(grep -i "ratelimit-remaining" "$tmp_headers" | awk '{print $3}' | tr -d '\r')
+    LABEL_LIMIT_RESET=$(grep -i "ratelimit-reset" "$tmp_headers" | awk '{print $3}' | tr -d '\r')
+
+    # Print the rate limit values (optional)
+    # Print the rate limit values (optional)
+    log "Rate Limit Remaining: $LABEL_LIMIT_REMAINING"
+    log "Rate Limit Reset Time: $LABEL_LIMIT_RESET"
+
+    # Capture the response body
+    response=$(cat "$tmp_body" | tr -d '\n')
+    echo "$response"
+
+    # Clean up the temporary files
+    rm "$tmp_headers" "$tmp_body"
+
+}
+
+report() {
+    jq -nc --arg did "$did" --arg displayName "$displayName" --arg description "$description" --arg labels "$labels" --arg flag "$flag" --arg last_seen "$(date +"%Y-%m-%dT%H:%M:%S%z")" --arg negated "TRUE" '{"did": $did, "displayName": $displayName, "description": $description, "labels": $labels, "flag": $flag, "last_seen": $last_seen, negated: $negated}'
+}
+
+function process_labeled_users() {
+    local flag="$1"
+    log "Processing users for $1."
+
+    if [ "$end" -ge "$length" ]; then
+        end="$length"
+    fi
+
+    dids=$(duckdb users.db -json -c "SELECT did FROM tmp WHERE id BETWEEN ${start} AND ${end}")
+
+    start=$((start + 25))
+    end=$((end + 25))
+
+    check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+
+    get_profiles "$dids"
+    expiredJWT_Check "$response"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            #check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            get_profiles "$dids"
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            #check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            get_profiles "$dids"
+        fi
+
+    profiles=$(echo "$response" | jq -r '.profiles')
+
+    echo "$profiles" | jq -c '.[]' | while read -r profile; do
+        did=$(echo "$profile" | jq -r '.did')
+        displayName=$(echo "$profile" | jq -r '.displayName' | tr -d '\n')
+        description=$(echo "$profile" | jq -r '.description' | tr -d '\n')
+
+        flagged=0
+        if [ "$flag" = "hammer-sickle" ]; then
+            if echo "$displayName" | grep -iE '☭' >/dev/null; then
+                flagged=1
+            elif echo "$description" | grep -iE '☭' >/dev/null; then
+                flagged=1
+            fi
+        elif [ "$flag" = "inverted-red-triangle" ]; then
+            if echo "$displayName" | grep -iE '🔻' >/dev/null; then
+                flagged=1
+            elif echo "$description" | grep -iE '🔻' >/dev/null; then
+                flagged=1
+            fi
+        fi
+
+        if [ "$flagged" -eq 1 ]; then
+            continue
+        else
+        log "Removing $flag from DID: $did."
+            negate_profile_label "$did" "$flag"
+            echo "$(report)" | tee -a tmp/reports.json >/dev/null
+        fi
+
+    done
+
+}
+
+function main() {
+    # Fetch the access JWT
+    log "Authenticating with Bluesky."
+    auth "$BLUESKY_HANDLE" "$BLUESKY_APP_PASSWORD"
+
+    # Initialize variables for rate limiting
+    LABEL_LIMIT_REMAINING=3000
+    LABEL_LIMIT_RESET=0
+
+    # Fetch the label profiles
+    log "Fetching label profiles for triangle."
+
+    flag="inverted-red-triangle"
+    length=$(duckdb "$DATABASE" -json -c "
+    SELECT COUNT(distinct did) as count
+    FROM labeled_dids
+    WHERE label = '$flag';
+    " | jq -r '.[0].count')
+
+    start=1
+    end=25
+
+    log "$length unique dids observed."
+
+    duckdb "$DATABASE" -json -c "CREATE OR REPLACE SEQUENCE id_seq START 1;
+    CREATE OR REPLACE TABLE tmp as SELECT * FROM labeled_dids WHERE label='$flag';
+    ALTER TABLE tmp ADD COLUMN id INTEGER DEFAULT nextval('id_seq');"
+
+    while [ "$start" -le "$length" ]; do
+        process_labeled_users "$flag"
+    done
+
+    duckdb "$DATABASE" -json -c "DROP TABLE tmp;"
+
+    # Fetch the label profiles
+    log "Fetching label profiles for hammer-sickle."
+
+    flag="hammer-sickle"
+    length=$(duckdb "$DATABASE" -json -c "
+    SELECT COUNT(*) as count
+    FROM labeled_dids
+    WHERE label = '$flag';
+    " | jq -r '.[0].count')
+
+    start=0
+    end=24
+
+    log "$length unique dids observed."
+
+    duckdb "$DATABASE" -json -c "CREATE OR REPLACE SEQUENCE id_seq START 1;
+    CREATE OR REPLACE TABLE tmp as SELECT * FROM labeled_dids WHERE label='$flag';
+    ALTER TABLE tmp ADD COLUMN id INTEGER DEFAULT nextval('id_seq');"
+
+    while [ "$start" -le "$length" ]; do
+        process_labeled_users "$flag"
+    done
+
+    duckdb "$DATABASE" -json -c "DROP TABLE tmp;"
+
+    duckdb users.db -c "COPY reports FROM 'tmp/reports.json' (FORMAT JSON);"
+    duckdb users.db -c "CREATE OR REPLACE TABLE labeled_dids AS WITH negated as (SELECT did, flag, max(last_seen) FROM reports WHERE negated = TRUE GROUP BY did, flag), latest as (SELECT did, flag FROM negated) SELECT * FROM labeled_dids a WHERE NOT EXISTS (SELECT 1 from latest b WHERE a.did = b.did AND a.label = b.flag);"
+
+    rm tmp/reports.json
+
+}
+
+main

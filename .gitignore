@@ -26,3 +26,4 @@ tmp/*
 data/*
 *.out
 *.err
+restart-lists.err
