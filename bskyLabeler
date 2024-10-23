@@ -53,7 +53,7 @@ function process_post() {
             # Check if any URIs match the specified domains
             found=0
             for url in $urls; do
-                if echo "$url" | grep -iE 'gofundme\.com|gofund\.me|ko-fi\.com|buymeacoffee\.com|venmo\.com|cash\.app|cash\.me|paypal\.com|paypal\.me' >/dev/null; then
+                if echo "$url" | grep -iE 'gofundme\.com|gofund\.me|ko-fi\.com|buymeacoffee\.com|venmo\.com|cash\.app|cash\.me|paypal\.com|paypal\.me|gogetfunding\.com' >/dev/null; then
                     found=1
                     echo "$json" >>flagged_posts.json
                     rkey=$(echo "$json" | jq -r '.rkey')
