@@ -36,20 +36,20 @@ function main {
     # Process DIDS
     process_dids
 
-    length=$(duckdb "$DATABASE" -json -c "
-    SELECT COUNT(*) as count
-    FROM unique_dids;
-    " | jq -r '.[0].count')
+   length=$(duckdb "$DATABASE" -json -c "SELECT COUNT(*) as count FROM unique_dids;" | jq -r '.[0].count')
 
-    start=0
-    end=24
+   start=0
+   end=24
 
     log "$length unique dids observed."
 
     while [ "$start" -le "$length" ]; do
-        process_users
-    done
+       process_users
+   done
 
+    # Label Profiles
+
+    duckdb "$DATABASE" -c "CREATE OR REPLACE TABLE reports AS WITH new_reports AS (SELECT * FROM read_json('tmp/reports.json', format = 'newline_delimited')) SELECT * FROM reports UNION ALL (SELECT * FROM new_reports);"
     label_profiles
     create_reports
     update_lists

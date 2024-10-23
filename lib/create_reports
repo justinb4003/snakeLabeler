@@ -32,6 +32,34 @@ function create_reports() {
     dids=$(duckdb "$DATABASE" -jsonlines -c "
     SELECT DISTINCT did
     FROM reports
+    WHERE flag = 'elon-musk' AND did NOT IN (
+        SELECT did
+        FROM reported_dids
+        WHERE label = 'elon-musk'
+    );" | jq -r '.[]')
+
+    for did in $dids; do
+        log "Flagging $did as elon-musk."
+        duckdb "$DATABASE" -c "INSERT INTO reported_dids (did, label, date) VALUES ('$did', 'elon-musk', '$today');"
+
+        report_profile "$did" "Elon Musk Mentioned"
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/label.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            report_profile "$did" "Elon Musk Mentioned"
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            report_profile "$did" "Elon Musk Mentioned"
+        fi
+
+    done
+
+    dids=$(duckdb "$DATABASE" -jsonlines -c "
+    SELECT DISTINCT did
+    FROM reports
     WHERE flag = 'zeta' AND did NOT IN (
         SELECT did
         FROM reported_dids

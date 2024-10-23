@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+# Source Credentials --- Note that this is not secure and will leak
+# Goal is just to keep them off github
+source .env
+source config.sh
+
+# Source Modules
+source lib/auth
+source lib/functions
+
+auth "$BLUESKY_HANDLE" "$BLUESKY_APP_PASSWORD"
+
+report() {
+    jq -nc --arg did "$did" --arg uri "$uri" '{"did": $did, "uri": $uri}'
+}
+
+list=$(curl 'https://blewit.us-west.host.bsky.network/xrpc/app.bsky.graph.getList?list=at%3A%2F%2Fdid%3Aplc%3Ae4elbtctnfqocyfcml6h2lf7%2Fapp.bsky.graph.list%2F3l4ueabtpec2a&limit=1' \
+  -H 'atproto-accept-labelers: did:plc:ar7c4by46qjdydhdevvrndac;redact' \
+  -H "authorization: Bearer $accessJwt")
+
+count=$(echo "$list" | jq -r '.list.listItemCount')
+cursor=$(echo "$list" | jq -r '.cursor')
+
+start=100
+while [ $start -lt "$count" ]; do
+
+response=$(curl "https://blewit.us-west.host.bsky.network/xrpc/app.bsky.graph.getList?list=at%3A%2F%2Fdid%3Aplc%3Ae4elbtctnfqocyfcml6h2lf7%2Fapp.bsky.graph.list%2F3l4ueabtpec2a&limit=$start&cursor=$cursor" \
+    -H "authorization: Bearer $accessJwt")
+
+  uri=$(echo "$response" | jq -r '.items.[].uri')
+  did=$(echo "$response" | jq -r '.items.[].subject.did')
+
+  echo "$(report)" | tee -a tmp/list_items.json >/dev/null
+
+  cursor=$(echo "$response" | jq -r '.cursor')
+
+  start=$((start + 100))
+done
