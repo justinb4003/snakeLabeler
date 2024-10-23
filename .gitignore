@@ -19,3 +19,11 @@ test_data
 *.sql
 cleanup.sh
 cleanup
+list_updater
+tmp
+data
+tmp/*
+data/*
+*.out
+*.err
+restart-lists.err

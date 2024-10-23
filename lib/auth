@@ -22,7 +22,7 @@ function auth {
     # Fetch the access JWT
     log "Fetching access JWT."
 
-    auth=$(curl -X POST https://blewit.us-west.host.bsky.network/xrpc/com.atproto.server.createSession \
+    auth=$(curl -s -X POST https://blewit.us-west.host.bsky.network/xrpc/com.atproto.server.createSession \
         -H "Content-Type: application/json" \
         -d "{\"identifier\": \"$BLUESKY_HANDLE\", \"password\": \"$BLUESKY_APP_PASSWORD\"}")
 

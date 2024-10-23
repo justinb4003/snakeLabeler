@@ -37,7 +37,7 @@ function label_profiles {
     dids=$(duckdb "$DATABASE" -jsonlines -c "
     SELECT DISTINCT did
     FROM reports
-    WHERE flag = 'triangle' AND did NOT IN (
+    WHERE flag = 'inverted-red-triangle' AND did NOT IN (
         SELECT did
         FROM labeled_dids
         WHERE label = 'inverted-red-triangle'

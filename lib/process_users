@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+report() {
+    jq -nc --arg did "$did" --arg displayName "$displayName" --arg description "$description" --arg labels "$labels" --arg flag "$flag" --arg last_seen "$(date +"%Y-%m-%dT%H:%M:%S%z")" --arg negated "FALSE" '{"did": $did, "displayName": $displayName, "description": $description, "labels": $labels, "flag": $flag, "last_seen": $last_seen, negated: $negated}'
+}
+
 function process_users {
     log "Processing users from $start to $end."
     local profiles
@@ -41,119 +45,147 @@ function process_users {
         did=$(echo "$profile" | jq -r '.did')
         displayName=$(echo "$profile" | jq -r '.displayName' | tr -d '\n')
         description=$(echo "$profile" | jq -r '.description' | tr -d '\n')
+        handle=$(echo "$profile" | jq -r '.handle' | tr -d '\n')
         labelYN=$(echo "$profile" | jq -r '.labels == []')
         if [ "$labelYN" = "false" ]; then
             labels=$(echo "$profile" | jq -r '[.labels[].val] | join(" ")')
         fi
 
-        zeta=0
-        hammer_sickle=0
-        triangle=0
-        swastika=0
-        dinosaur=0
-        trump=0
-
         # Zeta
-        if echo "$displayName" | grep -iE '\bζ\b' >/dev/null; then
+        flag=zeta
+        zeta=0
+        if echo "$displayName" | grep -iE '\bζ\b' >/dev/null 2>/dev/null; then
             zeta=1
-            log "Flagged DID: $did with zeta in displayName."
-        elif echo "$description" | grep -iE '\bζ\b' >/dev/null; then
+            log "Flagged DID: $did with $flag in displayName."
+        elif echo "$description" | grep -iE '\bζ\b' >/dev/null 2>/dev/null; then
             zeta=1
-            log "Flagged DID: $did with zeta in description."
+            log "Flagged DID: $did with $flag in description."
         fi
 
         if [ "$zeta" -eq 1 ]; then
-            duckdb "$DATABASE" -c "
-                    INSERT INTO reports
-                        VALUES ('${did}', '${displayName}', '${description}', '${labels}', 'zeta',  '$(date +"%Y-%m-%d %H:%M:%S%z")');
-                    "
+            echo "$(report)" | tee -a tmp/reports.json > /dev/null
         fi
 
         # Hammer and Sickle
-        if echo "$displayName" | grep -iE '☭' >/dev/null; then
+        flag=hammer-sickle
+        hammer_sickle=0
+        if echo "$displayName" | grep -iE '☭' >/dev/null 2>/dev/null; then
             hammer_sickle=1
             log "Flagged DID: $did with hammer and sickle in displayName."
-        elif echo "$description" | grep -iE '☭' >/dev/null; then
+        elif echo "$description" | grep -iE '☭' >/dev/null 2>/dev/null; then
             hammer_sickle=1
             log "Flagged DID: $did with hammer and sickle in description."
         fi
 
         if [ "$hammer_sickle" -eq 1 ]; then
-            duckdb "$DATABASE" -c "
-                    INSERT INTO reports
-                        VALUES ('${did}', '${displayName}', '${description}', '${labels}', 'hammer-sickle', '$(date +"%Y-%m-%d %H:%M:%S%z")');
-                    "
+            echo "$(report)" | tee -a tmp/reports.json > /dev/null
         fi
 
         # Triangle
-        if echo "$displayName" | grep -iE '🔻' >/dev/null; then
+        flag=inverted-red-triangle
+        triangle=0
+        if echo "$displayName" | grep -iE '🔻' >/dev/null 2>/dev/null; then
             triangle=1
             log "Flagged DID: $did with inverted red triangle in displayName."
-        elif echo "$description" | grep -iE '🔻' >/dev/null; then
+        elif echo "$description" | grep -iE '🔻' >/dev/null 2>/dev/null; then
             triangle=1
             log "Flagged DID: $did with inverted red triangle in description."
         fi
 
         if [ "$triangle" -eq 1 ]; then
-            duckdb "$DATABASE" -c "
-                    INSERT INTO reports
-                        VALUES ('${did}', '${displayName}', '${description}', '${labels}', 'triangle',  '$(date +"%Y-%m-%d %H:%M:%S%z")');
-                    "
-        fi
-
-        # Swastika
-        if echo "$displayName" | grep -iE '卐' >/dev/null; then
-            swastika=1
-            log "Flagged DID: $did with swastika in displayName."
-        elif echo "$description" | grep -iE '卐' >/dev/null; then
-            swastika=1
-            log "Flagged DID: $did with swastika in description."
-        fi
-
-        if [ "$swastika" -eq 1 ]; then
-            duckdb "$DATABASE" -c "
-                    INSERT INTO reports
-                        VALUES ('${did}', '${displayName}', '${description}', '${labels}', 'swastika',  '$(date +"%Y-%m-%d %H:%M:%S%z")');
-                    "
-        fi
-
-        # Dinosaur
-        if echo "$displayName" | grep -iE 'Feminist🦖|Feminist 🦖' >/dev/null; then
-            dinosaur=1
-            log "Flagged DID: $did with Dinosaur Emoji in displayName."
-        elif echo "$description" | grep -iE 'Feminist🦖|Feminist 🦖' >/dev/null; then
-            dinosaur=1
-            log "Flagged DID: $did with Dinosaur Emoji in description."
-        fi
-
-        if [ "$dinosaur" -eq 1 ]; then
-            duckdb "$DATABASE" -c "
-                    INSERT INTO reports
-                        VALUES ('${did}', '${displayName}', '${description}', '${labels}', 'dinosaur-emoji',  '$(date +"%Y-%m-%d %H:%M:%S%z")');
-                    "
+            echo "$(report)" | tee -a tmp/reports.json > /dev/null
         fi
 
         # TRUMP
-        if echo "$displayName" | grep -E '\bMAGA\b' >/dev/null; then
+        flag=maga-trump
+        trump=0
+        if echo "$displayName" | grep -E '\bMAGA\b|MAGA2024|#MAGA2024|#MAGA' >/dev/null 2>/dev/null; then
             trump=1
             log "Flagged DID: $did for MAGA in displayName."
-        elif echo "$displayName" | grep -iE '\bTRUMP\b|TRUMP 2024|TRUMP 2024🇺🇸' >/dev/null; then
+        elif echo "$displayName" | grep -iE '\bTRUMP\b|TRUMP 2024|TRUMP 2024🇺🇸|#TRUMP|#TRUMP2024|TPUSA' >/dev/null 2>/dev/null; then
             trump=1
             log "Flagged DID: $did for Trump in displayName."
-        elif echo "$description" | grep -E '\bMAGA\b' >/dev/null; then
+        elif echo "$description" | grep -E '\bMAGA\b|MAGA2024|#MAGA2024|#MAGA' >/dev/null 2>/dev/null; then
             trump=1
             log "Flagged DID: $did for MAGA in description."
-        elif echo "$description" | grep -iE '\bTRUMP\b|TRUMP 2024|TRUMP 2024🇺🇸' >/dev/null; then
+        elif echo "$description" | grep -iE '\bTRUMP\b|TRUMP 2024|TRUMP 2024🇺🇸|#TRUMP|#TRUMP2024|TRUMP2024|TPUSA' >/dev/null 2>/dev/null; then
             trump=1
             log "Flagged DID: $did for Trump in description."
+        elif echo "$handle" | grep -iE "^MAGA|MAGA$|MAGA2024|^TRUMP|TRUMP$|TRUMP2024" >/dev/null 2>/dev/null; then
+            trump=1
+            log "Flagged DID: $did for MAGA in handle."
         fi
 
         if [ "$trump" -eq 1 ]; then
-            duckdb "$DATABASE" -c "
-                    INSERT INTO reports
-                        VALUES ('${did}', '${displayName}', '${description}', '${labels}', 'maga-trump',  '$(date +"%Y-%m-%d %H:%M:%S%z")');
-                    "
+            echo "$(report)" | tee -a tmp/reports.json > /dev/null
         fi
-    done
-}
 
+        # Musk
+        flag=elon-musk
+        musk=0
+        if echo "$displayName" | grep -E 'elonmusk|Elon Musk' >/dev/null 2>/dev/null; then
+            musk=1
+            log "Flagged DID: $did for Elon Musk in displayName."
+        elif echo "$displayName" | grep -iE '@elonmusk|Elon Musk|elonmusk' >/dev/null 2>/dev/null; then
+            musk=1
+            log "Flagged DID: $did for Elon Musk in displayName."
+        elif echo "$handle" | grep -iE "elonmusk" >/dev/null 2>/dev/null; then
+            musk=1
+            log "Flagged DID: $did for Elon Musk in handle."
+        fi
+
+        if [ "$musk" -eq 1 ]; then
+            echo "$(report)" | tee -a tmp/reports.json > /dev/null
+        fi
+
+    # Watchlist: Not actually labeling these yet, but collecting data
+    # Dinosaur
+    flag=dinosaur-emoji
+    dinosaur=0
+    if echo "$displayName" | grep -iE 'Feminist🦖|Feminist 🦖' >/dev/null 2>/dev/null; then
+        dinosaur=1
+        log "Flagged DID: $did with $flag in displayName."
+    elif echo "$description" | grep -iE 'Feminist🦖|Feminist 🦖' >/dev/null 2>/dev/null; then
+        dinosaur=1
+        log "Flagged DID: $did with $flag in description."
+    fi
+
+    if [ "$dinosaur" -eq 1 ]; then
+        echo "$(report)" | tee -a tmp/reports.json > /dev/null
+    fi
+
+    cross=0
+    flag=cross-emoji
+    if echo "$displayName" | grep -iE '☦️|Christian Vtuber' >/dev/null 2>/dev/null; then
+        cross=1
+        log "Flagged DID: $did with $flag in displayName."
+    elif echo "$description" | grep -iE '☦️|Christian Vtuber' >/dev/null 2>/dev/null; then
+        cross=1
+        log "Flagged DID: $did with $flag in description."
+    fi
+
+    if [ "$cross" -eq 1 ]; then
+        echo "$(report)" | tee -a tmp/reports.json > /dev/null
+    fi
+
+    # Swastika
+    flag=swastika
+    swastika=0
+    if echo "$displayName" | grep -iE '卐|1488|⚡{2,2}' >/dev/null 2>/dev/null; then
+        swastika=1
+        log "Flagged DID: $did with $flag in displayName."
+    elif echo "$description" | grep -iE '卐|1488|⚡{2,2}' >/dev/null 2>/dev/null; then
+        swastika=1
+        log "Flagged DID: $did with $flag in description."
+    elif echo "$handle" | grep -iE '1488' >/dev/null 2>/dev/null; then
+        swastika=1
+        log "Flagged DID: $did with $flag in handle."
+    fi
+
+    if [ "$swastika" -eq 1 ]; then
+        echo "$(report)" | tee -a tmp/reports.json > /dev/null
+    fi
+    done
+
+    log "Done processing users."
+}

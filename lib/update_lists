@@ -39,24 +39,29 @@ function update_lists() {
     for did in $dids; do
         log "Adding $did to list: $list."
 
-        duckdb "$DATABASE" -c "
-    INSERT INTO listed_dids (did, label, date) VALUES ('$did', '$label', '$today');
-    "
-
         check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-        add_list_item "$list" "$did"
+        response=$(add_list_item "$list" "$did")
 
         expiredJWT_Check "$response"
         echo "$response" >>"$LOGPATH/list.log"
 
         if [ "$tokenExpired" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            response=$(add_list_item "$list" "$did")
         fi
         if [ "$tokenInvalid" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            response=$(add_list_item "$list" "$did")
         fi
+
+        uri=$(echo "$response" | jq -r '.uri')
+        cid=$(echo "$response" | jq -r '.commit.cid')
+        rkey=$(echo "$response" | jq -r '.commit.rev')
+
+        duckdb "$DATABASE" -c "
+        INSERT INTO listed_dids (date, did, label, list, cid, rkey) VALUES ('$today', '$did', '$label', '$uri', '$cid', '$rkey');
+    "
+
     done
 
     # Update List for Inverted Red Triangle
@@ -78,24 +83,28 @@ function update_lists() {
     for did in $dids; do
         log "Adding $did to list: $list."
 
-        duckdb "$DATABASE" -c "
-    INSERT INTO listed_dids (did, label, date) VALUES ('$did', '$label', '$today');
-    "
-
         check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-        add_list_item "$list" "$did"
+        response=$(add_list_item "$list" "$did")
 
         expiredJWT_Check "$response"
         echo "$response" >>"$LOGPATH/list.log"
 
         if [ "$tokenExpired" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            response=$(add_list_item "$list" "$did")
         fi
         if [ "$tokenInvalid" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            response=$(add_list_item "$list" "$did")
         fi
+
+        uri=$(echo "$response" | jq -r '.uri')
+        cid=$(echo "$response" | jq -r '.commit.cid')
+        rkey=$(echo "$response" | jq -r '.commit.rev')
+
+        duckdb "$DATABASE" -c "
+        INSERT INTO listed_dids (date, did, label, list, cid, rkey) VALUES ('$today', '$did', '$label', '$uri', '$cid', '$rkey');
+    "
     done
 
     # Update List for MAGA / Pro-Trump
@@ -108,24 +117,28 @@ function update_lists() {
     for did in $dids; do
         log "Adding $did to list: $list."
 
-        duckdb "$DATABASE" -c "
-    INSERT INTO listed_dids (did, label, date) VALUES ('$did', '$label', '$today');
-    "
-
         check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-        add_list_item "$list" "$did"
+        response=$(add_list_item "$list" "$did")
 
         expiredJWT_Check "$response"
         echo "$response" >>"$LOGPATH/list.log"
 
         if [ "$tokenExpired" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            response=$(add_list_item "$list" "$did")
         fi
         if [ "$tokenInvalid" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            response=$(add_list_item "$list" "$did")
         fi
+
+        uri=$(echo "$response" | jq -r '.uri')
+        cid=$(echo "$response" | jq -r '.commit.cid')
+        rkey=$(echo "$response" | jq -r '.commit.rev')
+
+        duckdb "$DATABASE" -c "
+        INSERT INTO listed_dids (date, did, label, list, cid, rkey) VALUES ('$today', '$did', '$label', '$uri', '$cid', '$rkey');
+    "
     done
 
     # Update List for Zeta
@@ -138,26 +151,95 @@ function update_lists() {
     for did in $dids; do
         log "Adding $did to list: $list."
 
-        duckdb "$DATABASE" -c "
-    INSERT INTO listed_dids (did, label, date) VALUES ('$did', '$label', '$today');
-    "
-
         check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-        add_list_item "$list" "$did"
+        response=$(add_list_item "$list" "$did")
 
         expiredJWT_Check "$response"
         echo "$response" >>"$LOGPATH/list.log"
 
         if [ "$tokenExpired" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            response=$(add_list_item "$list" "$did")
         fi
         if [ "$tokenInvalid" -eq 1 ]; then
             check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
-            create_profile_label "$did" "$label"
+            response=$(add_list_item "$list" "$did")
         fi
+
+        uri=$(echo "$response" | jq -r '.uri')
+        cid=$(echo "$response" | jq -r '.commit.cid')
+        rkey=$(echo "$response" | jq -r '.commit.rev')
+
+        duckdb "$DATABASE" -c "
+        INSERT INTO listed_dids (date, did, label, list, cid, rkey) VALUES ('$today', '$did', '$label', '$uri', '$cid', '$rkey');
+    "
     done
 
+    # Update List for RMVE-IMVE
+    label="rmve-imve"
+    list=at://did:plc:e4elbtctnfqocyfcml6h2lf7/app.bsky.graph.list/3l6tfurf7li27
 
+    get_label_events "$label"
+    dids=$(echo "$response" | jq -r '.events[].subject.did')
 
+    for did in $dids; do
+        log "Adding $did to list: $list."
+
+        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+        response=$(add_list_item "$list" "$did")
+
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/list.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            response=$(add_list_item "$list" "$did")
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            response=$(add_list_item "$list" "$did")
+        fi
+
+        uri=$(echo "$response" | jq -r '.uri')
+        cid=$(echo "$response" | jq -r '.commit.cid')
+        rkey=$(echo "$response" | jq -r '.commit.rev')
+
+        duckdb "$DATABASE" -c "
+        INSERT INTO listed_dids (date, did, label, list, cid, rkey) VALUES ('$today', '$did', '$label', '$uri', '$cid', '$rkey');
+    "
+    done
+
+    # Update List for Nazi Symbolism
+    label="nazi-symbolism"
+    list=at://did:plc:e4elbtctnfqocyfcml6h2lf7/app.bsky.graph.list/3l6vdudxgeb2z
+
+    get_label_events "$label"
+    dids=$(echo "$response" | jq -r '.events[].subject.did')
+
+    for did in $dids; do
+        log "Adding $did to list: $list."
+
+        check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+        response=$(add_list_item "$list" "$did")
+
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/list.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            response=$(add_list_item "$list" "$did")
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            response=$(add_list_item "$list" "$did")
+        fi
+
+        uri=$(echo "$response" | jq -r '.uri')
+        cid=$(echo "$response" | jq -r '.commit.cid')
+        rkey=$(echo "$response" | jq -r '.commit.rev')
+
+        duckdb "$DATABASE" -c "
+        INSERT INTO listed_dids (date, did, label, list, cid, rkey) VALUES ('$today', '$did', '$label', '$uri', '$cid', '$rkey');
+    "
+    done
 }

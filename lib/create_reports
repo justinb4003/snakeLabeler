@@ -32,6 +32,34 @@ function create_reports() {
     dids=$(duckdb "$DATABASE" -jsonlines -c "
     SELECT DISTINCT did
     FROM reports
+    WHERE flag = 'elon-musk' AND did NOT IN (
+        SELECT did
+        FROM reported_dids
+        WHERE label = 'elon-musk'
+    );" | jq -r '.[]')
+
+    for did in $dids; do
+        log "Flagging $did as elon-musk."
+        duckdb "$DATABASE" -c "INSERT INTO reported_dids (did, label, date) VALUES ('$did', 'elon-musk', '$today');"
+
+        report_profile "$did" "Elon Musk Mentioned"
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/label.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            report_profile "$did" "Elon Musk Mentioned"
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            report_profile "$did" "Elon Musk Mentioned"
+        fi
+
+    done
+
+    dids=$(duckdb "$DATABASE" -jsonlines -c "
+    SELECT DISTINCT did
+    FROM reports
     WHERE flag = 'zeta' AND did NOT IN (
         SELECT did
         FROM reported_dids
@@ -59,4 +87,100 @@ function create_reports() {
         fi
 
     done
+
+    dids=$(duckdb "$DATABASE" -jsonlines -c "
+    SELECT DISTINCT did
+    FROM reports
+    WHERE flag = 'swastika' AND did NOT IN (
+        SELECT did
+        FROM reported_dids
+        WHERE label = 'swastika'
+    ) AND did NOT IN (
+        SELECT did
+        FROM whitelist
+    );" | jq -r '.[]')
+
+    for did in $dids; do
+        log "Flagging $did as swastika."
+        duckdb "$DATABASE" -c "INSERT INTO reported_dids (did, label, date) VALUES ('$did', 'swastika', '$today');"
+
+        report_profile "$did" "Nazi Symbolism in diplayName or description"
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/label.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            report_profile "$did" "Nazi Symbolism in diplayName or description"
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            report_profile "$did" "Nazi Symbolism in diplayName or description"
+        fi
+
+    done
+
+    # Cross Emoji
+    dids=$(duckdb "$DATABASE" -jsonlines -c "
+    SELECT DISTINCT did
+    FROM reports
+    WHERE flag = 'cross-emoji' AND did NOT IN (
+        SELECT did
+        FROM reported_dids
+        WHERE label = 'cross-emoji'
+    ) AND did NOT IN (
+        SELECT did
+        FROM whitelist
+    );" | jq -r '.[]')
+
+    for did in $dids; do
+        log "Flagging $did as cross-emoji."
+        duckdb "$DATABASE" -c "INSERT INTO reported_dids (did, label, date) VALUES ('$did', 'cross-emoji', '$today');"
+
+        report_profile "$did" "Cross Emoji in diplayName or description"
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/label.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            report_profile "$did" "Cross Emoji in diplayName or description"
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            report_profile "$did" "Cross Emoji in diplayName or description"
+        fi
+
+    done
+
+    # Dinosaur Emoji
+    dids=$(duckdb "$DATABASE" -jsonlines -c "
+    SELECT DISTINCT did
+    FROM reports
+    WHERE flag = 'dinosaur-emoji' AND did NOT IN (
+        SELECT did
+        FROM reported_dids
+        WHERE label = 'dinosaur-emoji'
+    ) AND did NOT IN (
+        SELECT did
+        FROM whitelist
+    );" | jq -r '.[]')
+
+    for did in $dids; do
+        log "Flagging $did as dinosaur-emoji."
+        duckdb "$DATABASE" -c "INSERT INTO reported_dids (did, label, date) VALUES ('$did', 'dinosaur-emoji', '$today');"
+
+        report_profile "$did" "Dinosaur Emoji in diplayName or description"
+        expiredJWT_Check "$response"
+        echo "$response" >>"$LOGPATH/label.log"
+
+        if [ "$tokenExpired" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            report_profile "$did" "Dinosaur Emoji in diplayName or description"
+        fi
+        if [ "$tokenInvalid" -eq 1 ]; then
+            check_rate_limit "$LABEL_LIMIT_REMAINING" "$LABEL_LIMIT_RESET"
+            report_profile "$did" "Dinosaur Emoji in diplayName or description"
+        fi
+
+    done
+
 }

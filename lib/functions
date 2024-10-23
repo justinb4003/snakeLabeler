@@ -282,7 +282,45 @@ function add_list_item() {
     tmp_headers=$(mktemp)
     tmp_body=$(mktemp)
 
-    curl -v 'https://blewit.us-west.host.bsky.network/xrpc/com.atproto.repo.createRecord' \
+    curl  -v 'https://blewit.us-west.host.bsky.network/xrpc/com.atproto.repo.createRecord' \
+        -H 'atproto-accept-labelers: did:plc:ar7c4by46qjdydhdevvrndac;redact' \
+        -H "authorization: Bearer $accessJwt" \
+        -H 'Accept-Encoding: identity' \
+        -H 'content-type: application/json' \
+        -d "{
+            \"collection\": \"app.bsky.graph.listitem\",
+            \"repo\": \"did:plc:e4elbtctnfqocyfcml6h2lf7\",
+            \"record\": {
+                \"subject\": \"$subject\",
+                \"list\": \"$list_id\",
+                \"createdAt\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")\",
+                \"\$type\": \"app.bsky.graph.listitem\"
+            }
+        }" >"$tmp_body" 2>"$tmp_headers"
+
+    # Extract the rate limit information from the headers
+    LABEL_LIMIT_REMAINING=$(grep -i "ratelimit-remaining" "$tmp_headers" | awk '{print $3}' | tr -d '\r')
+    LABEL_LIMIT_RESET=$(grep -i "ratelimit-reset" "$tmp_headers" | awk '{print $3}' | tr -d '\r')
+
+    # Capture the response body
+    response=$(cat "$tmp_body" | tr -d '\n')
+    echo "$response"
+
+    # Clean up the temporary files
+    rm "$tmp_headers" "$tmp_body"
+
+}
+
+function remove_list_item() {
+    local list_id=$1
+    local subject=$2
+    local response
+
+    # Create temporary files to store headers and body
+    tmp_headers=$(mktemp)
+    tmp_body=$(mktemp)
+
+    curl -v 'https://blewit.us-west.host.bsky.network/xrpc/com.atproto.repo.deleteRecord' \
         -H 'atproto-accept-labelers: did:plc:ar7c4by46qjdydhdevvrndac;redact' \
         -H "authorization: Bearer $accessJwt" \
         -H 'Accept-Encoding: identity' \
@@ -309,6 +347,5 @@ function add_list_item() {
     rm "$tmp_headers" "$tmp_body"
 
 }
-
 
 
