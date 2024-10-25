@@ -99,19 +99,19 @@ function process_users {
         # TRUMP
         flag=maga-trump
         trump=0
-        if echo "$displayName" | grep -E '\bMAGA\b|MAGA2024|#MAGA2024|#MAGA' >/dev/null 2>/dev/null; then
+        if echo "$displayName" | grep -E '\bMAGA\b|MAGA2024|#MAGA2024|#MAGA|#MAHA|\bMAHA\b' >/dev/null 2>/dev/null; then
             trump=1
             log "Flagged DID: $did for MAGA in displayName."
         elif echo "$displayName" | grep -iE '\bTRUMP\b|TRUMP 2024|TRUMP 2024🇺🇸|#TRUMP|#TRUMP2024|TPUSA' >/dev/null 2>/dev/null; then
             trump=1
             log "Flagged DID: $did for Trump in displayName."
-        elif echo "$description" | grep -E '\bMAGA\b|MAGA2024|#MAGA2024|#MAGA' >/dev/null 2>/dev/null; then
+        elif echo "$description" | grep -E '\bMAGA\b|MAGA2024|#MAGA2024|#MAGA|#MAHA|\bMAHA\b' >/dev/null 2>/dev/null; then
             trump=1
             log "Flagged DID: $did for MAGA in description."
         elif echo "$description" | grep -iE '\bTRUMP\b|TRUMP 2024|TRUMP 2024🇺🇸|#TRUMP|#TRUMP2024|TRUMP2024|TPUSA' >/dev/null 2>/dev/null; then
             trump=1
             log "Flagged DID: $did for Trump in description."
-        elif echo "$handle" | grep -iE "^MAGA|MAGA$|MAGA2024|^TRUMP|TRUMP$|TRUMP2024" >/dev/null 2>/dev/null; then
+        elif echo "$handle" | grep -iE "^MAGA|MAGA$|MAGA2024|^TRUMP|TRUMP$|TRUMP2024|^MAHA|MAHA$" >/dev/null 2>/dev/null; then
             trump=1
             log "Flagged DID: $did for MAGA in handle."
         fi
@@ -171,13 +171,13 @@ function process_users {
     # Swastika
     flag=swastika
     swastika=0
-    if echo "$displayName" | grep -iE '卐|1488|⚡{2,2}' >/dev/null 2>/dev/null; then
+    if echo "$displayName" | grep -iE '卐|1488|⚡{2,2}|HWABAG' >/dev/null 2>/dev/null; then
         swastika=1
         log "Flagged DID: $did with $flag in displayName."
-    elif echo "$description" | grep -iE '卐|1488|⚡{2,2}' >/dev/null 2>/dev/null; then
+    elif echo "$description" | grep -iE '卐|1488|⚡{2,2}|HWABAG|#HWABAG' >/dev/null 2>/dev/null; then
         swastika=1
         log "Flagged DID: $did with $flag in description."
-    elif echo "$handle" | grep -iE '1488' >/dev/null 2>/dev/null; then
+    elif echo "$handle" | grep -iE '1488|HWABAG' >/dev/null 2>/dev/null; then
         swastika=1
         log "Flagged DID: $did with $flag in handle."
     fi
